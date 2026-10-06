@@ -27,7 +27,9 @@ struct JizaHomeView: View {
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
             }
-            .navigationTitle("jiza")
+            .navigationTitle("Jiza")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .principal) { JizaWordmark(height: 32) } }
             .navigationDestination(for: String.self) { destination in
                 switch destination {
                 case "Player": ContentView().navigationBarTitleDisplayMode(.inline)
@@ -143,4 +145,23 @@ private struct JizaSafariView: UIViewControllerRepresentable {
         SFSafariViewController(url: url)
     }
     func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
+}
+
+/// Use the approved lettering as an alpha mask, preserving its shape exactly.
+struct JizaWordmark: View {
+    var height: CGFloat = 44
+    var body: some View {
+        Image("JizaWordmark")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: height * 2, height: height)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityLabel("Jiza")
+            .accessibilityAddTraits(.isHeader)
+    }
 }

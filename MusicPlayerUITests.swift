@@ -59,6 +59,7 @@ final class MusicPlayerUITests: XCTestCase {
         app.launchArguments = ["-jizaTradingAddress", ""]
         app.launch()
         XCTAssertTrue(app.buttons["homePlayer"].waitForExistence(timeout: 10))
+        capture(app, name: "Jiza White Wordmark Home")
         XCTAssertTrue(app.buttons["homeBrowser"].exists)
         XCTAssertTrue(app.buttons["homeTrading"].exists)
         app.buttons["homeTrading"].tap()

@@ -88,9 +88,7 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text("jiza")
-                .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                .tracking(-1)
+            JizaWordmark()
             Spacer()
             Menu {
                 Button {
