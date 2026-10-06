@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import UniformTypeIdentifiers
 
 @MainActor
@@ -122,6 +122,12 @@ struct VideoLibraryView: View {
             Section {
                 Text("Native playback supports AirPlay and Picture in Picture where available. VLC opens additional formats and external subtitles.")
                     .font(.footnote).foregroundStyle(.secondary)
+                NavigationLink("Open-source licenses") {
+                    ScrollView {
+                        Text((Bundle.main.url(forResource: "VLCKit-LGPL-2.1", withExtension: "txt").flatMap { try? String(contentsOf: $0) }) ?? "License: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html")
+                            .font(.footnote).textSelection(.enabled).padding()
+                    }.navigationTitle("VideoLAN license")
+                }
                 Link("VLC engine & source", destination: URL(string: "https://code.videolan.org/videolan/VLCKit")!)
             }
         }

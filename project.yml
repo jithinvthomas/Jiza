@@ -23,6 +23,8 @@ targets:
       - JizaHomeView.swift
       - InteraMusicPlayerApp.swift
       - Assets.xcassets
+      - path: Licenses
+        buildPhase: resources
     info:
       path: Info.plist
       properties:

@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import MediaPlayer
 import MobileVLCKit
+import UIKit
 import UniformTypeIdentifiers
 
 final class VideoFileAccess {
@@ -25,6 +26,7 @@ enum VideoFit: String, CaseIterable { case fit = "Fit", fill = "Fill", stretch =
 final class VideoPlayerModel: ObservableObject {
     let player = AVPlayer()
     let vlc = VLCMediaPlayer()
+    let vlcDrawable = UIView()
     @Published var isPresented = false
     @Published var isPiPActive = false
     @Published private(set) var isLoading = false
@@ -148,6 +150,7 @@ final class VideoPlayerModel: ObservableObject {
             }
             guard request == generation, !Task.isCancelled else { return }
             usingVLC = true
+            vlc.drawable = vlcDrawable
             vlc.media = VLCMedia(url: url)
             vlc.play()
             for _ in 0..<300 {

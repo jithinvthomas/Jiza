@@ -1,16 +1,22 @@
 import XCTest
 import AVFoundation
 import Combine
+import UIKit
 @testable import InteraMusic
 
 @MainActor
 final class VideoPlayerModelTests: XCTestCase {
     func testVLCOpensMatroskaAndSupportsSeekAndSpeed() async throws {
         let video = VideoPlayerModel(audio: music(), defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        video.vlcDrawable.frame = CGRect(x: 0, y: 0, width: 320, height: 180)
+        window.addSubview(video.vlcDrawable)
+        defer { video.vlcDrawable.removeFromSuperview() }
         await video.open(try fixture("sample-video", "mkv"), forceVLC: true)
         defer { video.close() }
         XCTAssertNil(video.errorMessage)
         XCTAssertTrue(video.usingVLC)
+        XCTAssertTrue(video.vlc.hasVideoOut)
         for _ in 0..<100 {
             if video.seekable && video.duration > 0 { break }
             try await Task.sleep(nanoseconds: 100_000_000)
