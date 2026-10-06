@@ -105,3 +105,5 @@ Apple API references:
 - https://developer.apple.com/documentation/webkit/wkwebsitedatastore/nonpersistent()
 - https://developer.apple.com/documentation/webkit/wkhttpcookiestore
 - https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowsarbitraryloadsinwebcontent
+
+For local Xcode integration tests, first run python3 browser_test_server.py in the repository; CI starts and stops this loopback-only fixture automatically.

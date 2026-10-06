@@ -66,6 +66,10 @@ extension BrowserModelTests {
         let base = URL(string: "http://127.0.0.1:8765")!
         let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let tab = browser.selected!
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        tab.web.frame = window.bounds
+        window.addSubview(tab.web)
+        defer { tab.web.removeFromSuperview() }
         tab.web.load(URLRequest(url: base.appendingPathComponent("page")))
         for _ in 0..<300 {
             if tab.web.title == "Jiza test page" && !browser.history.isEmpty { break }
@@ -104,4 +108,3 @@ extension BrowserModelTests {
         XCTAssertTrue(BrowserModel(defaults: browser.defaults).history.isEmpty)
     }
 }
-
