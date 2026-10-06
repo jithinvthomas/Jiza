@@ -1,5 +1,6 @@
 import XCTest
 import Combine
+import MediaPlayer
 import AVFoundation
 @testable import InteraMusic
 
@@ -94,6 +95,38 @@ final class AudioPlayerModelTests: XCTestCase {
         XCTAssertNotNil(player.errorMessage)
     }
 
+    func testRemoteControlsPublishStateAndChangeTracks() throws {
+        let (player, _) = isolatedPlayer()
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "without-artwork", withExtension: "mp3"))
+        player.tracks = [Track(url: fixture), Track(url: fixture)]
+        player.prepare(index: 0)
+        player.play()
+        defer { player.releaseRemoteControls() }
+        XCTAssertTrue(player.hasRemoteControls)
+        XCTAssertTrue(MPRemoteCommandCenter.shared().nextTrackCommand.isEnabled)
+        XCTAssertEqual(player.handleRemote(.pause), .success)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertEqual(MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] as? Double, 0)
+        XCTAssertEqual(player.handleRemote(.seek(0.1)), .success)
+        XCTAssertEqual(player.progress, 0.1, accuracy: 0.02)
+        XCTAssertEqual(player.handleRemote(.play), .success)
+        XCTAssertTrue(player.isPlaying)
+        XCTAssertEqual(player.handleRemote(.next), .success)
+        XCTAssertEqual(player.currentIndex, 1)
+        XCTAssertEqual(player.handleRemote(.previous), .success)
+        XCTAssertEqual(player.currentIndex, 0)
+        XCTAssertNotNil(MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork])
+        player.releaseRemoteControls()
+        XCTAssertFalse(player.hasRemoteControls)
+        XCTAssertEqual(player.handleRemote(.play), .noSuchContent)
+    }
+
+    func testInvalidAudioDoesNotPublishNowPlaying() throws {
+        let (player, _) = isolatedPlayer()
+        player.openIncomingFile(URL(fileURLWithPath: "/missing.mp3"))
+        XCTAssertFalse(player.hasRemoteControls)
+        XCTAssertEqual(player.handleRemote(.next), .noSuchContent)
+    }
     private func isolatedPlayer() -> (AudioPlayerModel, UserDefaults) {
         let defaults = UserDefaults(suiteName: "InteraTests-\(UUID().uuidString)")!
         return (AudioPlayerModel(defaults: defaults), defaults)

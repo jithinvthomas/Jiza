@@ -38,7 +38,7 @@ final class VideoPlayerModel: ObservableObject {
 
     func open(_ url: URL) async {
         close()
-        audio.pause() // Also cancels a pending music resume after a call.
+        audio.releaseRemoteControls() // Hand system controls to the video player.
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         let request = generation
         title = url.deletingPathExtension().lastPathComponent

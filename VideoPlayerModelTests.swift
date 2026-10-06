@@ -21,6 +21,7 @@ final class VideoPlayerModelTests: XCTestCase {
         await video.open(try fixture("sample-video", "mp4"))
         XCTAssertFalse(audio.isPlaying)
         XCTAssertTrue(video.isPresented)
+        XCTAssertFalse(audio.hasRemoteControls)
         XCTAssertNotNil(video.player.currentItem)
         XCTAssertNil(video.errorMessage)
         let item = try XCTUnwrap(video.player.currentItem)
@@ -83,6 +84,7 @@ final class VideoPlayerModelTests: XCTestCase {
             await Task.yield()
         }
         XCTAssertTrue(video.isPresented)
+
         video.close()
         await opening.value
         XCTAssertFalse(video.isPresented)

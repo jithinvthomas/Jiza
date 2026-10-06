@@ -22,6 +22,9 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
     @Published var errorMessage: String?
     @Published private(set) var currentArtwork: UIImage?
 
+    enum RemoteAction { case play, pause, toggle, next, previous, seek(Double) }
+    private var remoteTargets: [(MPRemoteCommand, Any)] = []
+    var hasRemoteControls: Bool { !remoteTargets.isEmpty }
     private var audio: AVAudioPlayer?
     var beforePlayback: (() -> Void)?
     private var timer: Timer?
@@ -159,7 +162,7 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
     }
 
     private func replaceSelection(with selected: [Track], url: URL, hasScope: Bool, name: String) {
-        pause()
+        releaseRemoteControls()
         audio = nil
         artworkTask?.cancel()
         currentArtwork = nil
@@ -231,6 +234,7 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
     func play() {
         guard !isInterrupted, let audio else { return }
         beforePlayback?()
+        registerRemoteControls()
         do {
             let session = AVAudioSession.sharedInstance()
             // Playback already supports AirPlay and Bluetooth A2DP. Explicitly
@@ -280,7 +284,78 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
         play()
     }
 
-    func seek(_ value: Double) { audio?.currentTime = value; progress = value; updateNowPlaying() }
+    func seek(_ value: Double) {
+        guard let audio, value.isFinite else { return }
+        let position = min(max(value, 0), duration)
+        audio.currentTime = position
+        progress = position
+        updateNowPlaying()
+    }
+
+    private func registerRemoteControls() {
+        guard !hasRemoteControls else { return }
+        let center = MPRemoteCommandCenter.shared()
+        let commands: [(MPRemoteCommand, RemoteAction)] = [
+            (center.playCommand, .play), (center.pauseCommand, .pause),
+            (center.togglePlayPauseCommand, .toggle), (center.nextTrackCommand, .next),
+            (center.previousTrackCommand, .previous)
+        ]
+        for (command, action) in commands {
+            let target = command.addTarget { [weak self] _ in
+                Self.onMain { self?.handleRemote(action) ?? .noSuchContent }
+            }
+            remoteTargets.append((command, target))
+        }
+        let seek = center.changePlaybackPositionCommand
+        let target = seek.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            let position = event.positionTime
+            return Self.onMain { self?.handleRemote(.seek(position)) ?? .noSuchContent }
+        }
+        remoteTargets.append((seek, target))
+        updateRemoteAvailability()
+    }
+
+    // MediaPlayer can deliver accessory commands off the main thread.
+    private nonisolated static func onMain(_ action: @MainActor () -> MPRemoteCommandHandlerStatus) -> MPRemoteCommandHandlerStatus {
+        if Thread.isMainThread { return MainActor.assumeIsolated { action() } }
+        return DispatchQueue.main.sync { MainActor.assumeIsolated { action() } }
+    }
+
+    func handleRemote(_ action: RemoteAction) -> MPRemoteCommandHandlerStatus {
+        guard hasRemoteControls, audio != nil, currentTrack != nil else { return .noSuchContent }
+        switch action {
+        case .play: play()
+        case .pause: pause()
+        case .toggle: togglePlay()
+        case .next: next()
+        case .previous: previous()
+        case .seek(let position):
+            guard position.isFinite else { return .commandFailed }
+            seek(position)
+        }
+        return errorMessage == nil ? .success : .commandFailed
+    }
+
+    private func updateRemoteAvailability() {
+        guard hasRemoteControls else { return }
+        let center = MPRemoteCommandCenter.shared()
+        let playable = audio != nil && currentTrack != nil
+        center.playCommand.isEnabled = playable
+        center.pauseCommand.isEnabled = playable
+        center.togglePlayPauseCommand.isEnabled = playable
+        center.nextTrackCommand.isEnabled = playable && tracks.count > 1
+        center.previousTrackCommand.isEnabled = playable && tracks.count > 1
+        center.changePlaybackPositionCommand.isEnabled = playable && duration > 0
+    }
+
+    func releaseRemoteControls() {
+        pause()
+        guard hasRemoteControls else { return }
+        for (command, target) in remoteTargets { command.removeTarget(target) }
+        remoteTargets.removeAll()
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
 
     private func startTimer() {
         stopTimer()
@@ -292,6 +367,7 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
     private func stopTimer() { timer?.invalidate(); timer = nil }
 
     deinit {
+        for (command, target) in remoteTargets { command.removeTarget(target) }
         NotificationCenter.default.removeObserver(self)
         artworkTask?.cancel()
         timer?.invalidate()
@@ -303,15 +379,22 @@ final class AudioPlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate 
     }
 
     private func updateNowPlaying() {
-        guard let track = currentTrack else { return }
+        guard hasRemoteControls else { return }
+        updateRemoteAvailability()
+        guard let track = currentTrack, audio != nil else {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            return
+        }
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title,
             MPMediaItemPropertyAlbumTitle: "Jiza",
             MPNowPlayingInfoPropertyElapsedPlaybackTime: progress,
             MPMediaItemPropertyPlaybackDuration: duration,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
+            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue
         ]
-        if let image = currentArtwork {
+        if let image = currentArtwork ?? UIImage(named: "JizaPlayer") ?? UIImage(named: "JizaSymbol") {
             info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info

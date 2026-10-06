@@ -81,3 +81,10 @@ https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custo
 Jiza now opens with Player, Browser, and Trading choices. Back returns to the home menu; audio remains owned by the app while switching sections. Incoming audio/video files open Player directly.
 
 Browser opens HTTPS websites inside Jiza using Safari Services. Trading saves a user-entered HTTPS server address on the device; no production address is assumed. The Python Jiza-Trading service must run on a server or authenticated development tunnel reachable from the phone. `localhost:8000` on a PC is not reachable as localhost on an iPhone. This change does not deploy or expose the trading backend.
+
+## iPhone system playback controls
+Audio playback registers play, pause, toggle, next, previous, and seek handlers with MPRemoteCommandCenter. Now Playing includes title, duration, elapsed position, playback rate, and cover art (Jiza fallback). Opening video releases the music handlers so they cannot restart audio while video owns playback.
+
+Device verification after installing this build: play a folder containing two songs, lock the iPhone, check the Now Playing title/artwork, pause/resume, scrub, and skip both directions from Control Center and a Bluetooth accessory. Repeat during video playback and after returning to music. Volume buttons retain iOS volume behavior; accessory-specific long presses only skip if the accessory emits next/previous commands. Simulator tests cannot prove physical Bluetooth or Lock Screen integration.
+
+Reference: https://developer.apple.com/documentation/mediaplayer/mpremotecommand
