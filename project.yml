@@ -17,6 +17,7 @@ targets:
     sources:
       - AudioPlayerModel.swift
       - VideoPlayerModel.swift
+      - PreparedVideoFile.swift
       - VideoPlayerView.swift
       - VideoLibraryView.swift
       - ContentView.swift

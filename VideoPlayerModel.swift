@@ -52,6 +52,7 @@ final class VideoPlayerModel: ObservableObject {
     private let audio: AudioPlayerModel
     private let defaults: UserDefaults
     private var fileAccess: VideoFileAccess?
+    private var preparedFile: PreparedVideoFile?
     private var subtitleAccess: VideoFileAccess?
     private var generation = UUID()
     private var statusObservation: NSKeyValueObservation?
@@ -111,16 +112,23 @@ final class VideoPlayerModel: ObservableObject {
         let access = VideoFileAccess(url)
         fileAccess = access
         pendingResume = savedPosition(for: url)
-        guard !url.isFileURL || (Self.isVideo(url) && FileManager.default.fileExists(atPath: url.path)) else {
-            fail("Choose a downloaded video file in Files.")
+        guard !url.isFileURL || Self.isVideo(url) else {
+            fail("Choose a video file such as MP4, MOV or MKV.")
             return
         }
         do {
+            let playbackURL: URL
+            if url.isFileURL {
+                let prepared = try await Task.detached(priority: .userInitiated) { try PreparedVideoFile(source: url) }.value
+                guard request == generation, !Task.isCancelled else { return }
+                preparedFile = prepared
+                playbackURL = prepared.url
+            } else { playbackURL = url }
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .moviePlayback, options: [])
             try session.setActive(true)
             if !forceVLC && url.scheme != "rtsp" {
-                let asset = AVURLAsset(url: url)
+                let asset = AVURLAsset(url: playbackURL)
                 let playable = (try? await asset.load(.isPlayable)) ?? false
                 let tracks = (try? await asset.loadTracks(withMediaType: .video)) ?? []
                 guard request == generation, !Task.isCancelled else { return }
@@ -135,7 +143,7 @@ final class VideoPlayerModel: ObservableObject {
                         let failed = item.status == .failed
                         Task { @MainActor [weak self] in
                             guard let self, request == self.generation, failed else { return }
-                            self.fail("Video playback failed. Try Open with VLC from the Video library.")
+                            self.fail("Video playback failed. Try Compatibility playback from the Video library.")
                         }
                     }
                     failureSubscription = NotificationCenter.default.publisher(for: AVPlayerItem.failedToPlayToEndTimeNotification, object: item)
@@ -152,7 +160,7 @@ final class VideoPlayerModel: ObservableObject {
             guard request == generation, !Task.isCancelled else { return }
             usingVLC = true
             vlc.drawable = vlcDrawable
-            vlc.media = VLCMedia(url: url)
+            vlc.media = VLCMedia(url: playbackURL)
             vlc.play()
             for _ in 0..<300 {
                 try await Task.sleep(nanoseconds: 100_000_000)
@@ -171,7 +179,7 @@ final class VideoPlayerModel: ObservableObject {
             fail("The video did not start. Check the file or stream address and try again.")
         } catch {
             guard request == generation, !Task.isCancelled else { return }
-            fail("Unable to open this video. It may be unavailable, damaged, or protected.")
+            fail("Unable to read or play this video. Check your Files provider connection and available storage, then try again.")
         }
     }
 
@@ -326,6 +334,7 @@ final class VideoPlayerModel: ObservableObject {
         if usingVLC { vlc.stop() }
         vlc.media = nil
         fileAccess = nil
+        preparedFile = nil
         subtitleAccess = nil
         audioGroup = nil
         subtitleGroup = nil

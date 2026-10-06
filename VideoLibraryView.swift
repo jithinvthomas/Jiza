@@ -113,22 +113,22 @@ struct VideoLibraryView: View {
                         }.padding(.vertical, 6)
                     }
                     .contextMenu {
-                        Button("Open with VLC") { open(url, vlc: true) }
+                        Button("Compatibility playback") { open(url, vlc: true) }
                         ShareLink(item: url)
                     }
                 }
             }
             if let error = library.error { Section { Text(error).foregroundStyle(.red) } }
             Section {
-                Text("Native playback supports AirPlay and Picture in Picture where available. VLC opens additional formats and external subtitles.")
+                Text("Supports local videos, network streams, subtitles, AirPlay and Picture in Picture where available.")
                     .font(.footnote).foregroundStyle(.secondary)
                 NavigationLink("Open-source licenses") {
                     ScrollView {
                         Text((Bundle.main.url(forResource: "VLCKit-LGPL-2.1", withExtension: "txt").flatMap { try? String(contentsOf: $0) }) ?? "License: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html")
                             .font(.footnote).textSelection(.enabled).padding()
-                    }.navigationTitle("VideoLAN license")
+                    }.navigationTitle("Acknowledgements")
                 }
-                Link("VLC engine & source", destination: URL(string: "https://code.videolan.org/videolan/VLCKit")!)
+                Link("Playback library source", destination: URL(string: "https://code.videolan.org/videolan/VLCKit")!)
             }
         }
         .navigationTitle("Video")

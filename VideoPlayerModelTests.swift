@@ -154,3 +154,16 @@ final class VideoPlayerModelTests: XCTestCase {
         XCTAssertEqual(video.player.rate, 0)
     }
 }
+
+extension VideoPlayerModelTests {
+    func testCoordinatedImportCopiesVideoAndCleansUp() throws {
+        let original = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "sample-video", withExtension: "mp4"))
+        var prepared: PreparedVideoFile? = try PreparedVideoFile(source: original)
+        let copy = try XCTUnwrap(prepared?.url)
+        XCTAssertNotEqual(copy, original)
+        XCTAssertEqual(try Data(contentsOf: copy), try Data(contentsOf: original))
+        prepared = nil
+        XCTAssertFalse(FileManager.default.fileExists(atPath: copy.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: original.path))
+    }
+}
