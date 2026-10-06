@@ -7,16 +7,17 @@ struct JizaHomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    Image("JizaSymbol")
-                        .resizable().scaledToFit()
-                        .frame(width: 76, height: 76)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .accessibilityHidden(true)
-                    Text("Your space. Your choice.")
-                        .font(.largeTitle.bold())
-                    Text("What would you like to open?")
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 16) {
+                        Image("JizaSymbol").resizable().scaledToFit()
+                            .frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Choose your space").font(.title2.bold())
+                            Text("Music, video and more").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
                     entry("Music", detail: "Your songs and playlists", route: "Player", asset: "JizaPlayer")
                     entry("Video", detail: "Your films, series and streams")
                     entry("Browser", detail: "Explore the web")
@@ -53,7 +54,7 @@ struct JizaHomeView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").accessibilityHidden(true)
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
         }

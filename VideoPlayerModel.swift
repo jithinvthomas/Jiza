@@ -158,7 +158,8 @@ final class VideoPlayerModel: ObservableObject {
                 try await Task.sleep(nanoseconds: 100_000_000)
                 guard request == generation, !Task.isCancelled else { return }
                 if vlc.state == .error { throw CocoaError(.fileReadCorruptFile) }
-                if vlc.state == .playing || vlc.state == .paused {
+                // VLC may report a buffering/stream-added event while decoding is active.
+                if vlc.isPlaying && vlc.hasVideoOut {
                     guard vlc.numberOfVideoTracks > 0 else { throw CocoaError(.fileReadUnsupportedScheme) }
                     vlc.rate = speed
                     isLoading = false
@@ -166,6 +167,7 @@ final class VideoPlayerModel: ObservableObject {
                     return
                 }
             }
+            print("Jiza VLC startup timeout: state=\(vlc.state.rawValue), playing=\(vlc.isPlaying), video=\(vlc.hasVideoOut), tracks=\(vlc.numberOfVideoTracks)")
             fail("The video did not start. Check the file or stream address and try again.")
         } catch {
             guard request == generation, !Task.isCancelled else { return }
