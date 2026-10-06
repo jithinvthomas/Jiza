@@ -1,6 +1,5 @@
 import XCTest
 import WebKit
-import Network
 @testable import InteraMusic
 
 @MainActor
@@ -64,14 +63,7 @@ final class BrowserModelTests: XCTestCase {
 extension BrowserModelTests {
     func testWebNavigationHistoryCookiesAndDownloadToChosenFolder() async throws {
         let payload = Data("Jiza downloaded file fixture".utf8)
-        let server = try BrowserFixtureServer(payload: payload)
-        defer { server.listener.cancel() }
-        for _ in 0..<100 {
-            if server.listener.port != nil { break }
-            try await Task.sleep(nanoseconds: 20_000_000)
-        }
-        let port = try XCTUnwrap(server.listener.port)
-        let base = URL(string: "http://127.0.0.1:\(port.rawValue)")!
+        let base = URL(string: "http://127.0.0.1:8765")!
         let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let tab = browser.selected!
         tab.web.load(URLRequest(url: base.appendingPathComponent("page")))
@@ -113,34 +105,3 @@ extension BrowserModelTests {
     }
 }
 
-private final class BrowserFixtureServer {
-    let listener: NWListener
-    init(payload: Data) throws {
-        let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
-        listener = try NWListener(using: parameters)
-        listener.newConnectionHandler = { connection in
-            connection.start(queue: .global())
-            Self.receive(connection, request: Data(), payload: payload)
-        }
-        listener.start(queue: .global())
-    }
-    private static func receive(_ connection: NWConnection, request: Data, payload: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, complete, error in
-            var buffer = request
-            if let data { buffer.append(data) }
-            guard let requestText = String(data: buffer, encoding: .utf8), requestText.contains("\r\n\r\n") else {
-                if complete || error != nil { connection.cancel() }
-                else { receive(connection, request: buffer, payload: payload) }
-                return
-            }
-            let file = requestText.hasPrefix("GET /file ")
-            let body = file ? payload : Data("<html><head><title>Jiza test page</title></head><body>Browser fixture</body></html>".utf8)
-            let extra = file ? "Content-Disposition: attachment; filename=fixture.txt\r\n" : "Set-Cookie: jiza_test=yes; Path=/; SameSite=Lax\r\n"
-            let mime = file ? "application/octet-stream" : "text/html"
-            var response = Data("HTTP/1.1 200 OK\r\nContent-Type: \(mime)\r\nContent-Length: \(body.count)\r\n\(extra)Connection: close\r\n\r\n".utf8)
-            response.append(body)
-            connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
-        }
-    }
-}

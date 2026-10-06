@@ -43,6 +43,14 @@ jobs:
           cat Podfile.lock
       - name: Build and test without packaging an IPA
         run: |
+          python3 browser_test_server.py > browser-test-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8765/page >/dev/null && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8765/page >/dev/null
           xcodebuild test -workspace InteraMusicPlayer.xcworkspace -scheme InteraMusicPlayer -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Export simulator screenshots
         if: always()
@@ -55,3 +63,4 @@ jobs:
             TestResults.xcresult
             test-images
             Podfile.lock
+            browser-test-server.log
