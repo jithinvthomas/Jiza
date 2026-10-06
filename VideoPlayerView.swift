@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import AVKit
 import MediaPlayer
 import MobileVLCKit
@@ -195,11 +195,13 @@ private struct NativeVideoPlayer: UIViewControllerRepresentable {
     final class Coordinator: NSObject, AVPlayerViewControllerDelegate {
         let video: VideoPlayerModel
         init(video: VideoPlayerModel) { self.video = video }
-        func playerViewControllerDidStartPictureInPicture(_ playerViewController: AVPlayerViewController) { video.isPiPActive = true }
-        func playerViewControllerDidStopPictureInPicture(_ playerViewController: AVPlayerViewController) { video.isPiPActive = false }
+        func playerViewControllerDidStartPictureInPicture(_ playerViewController: AVPlayerViewController) { Task { @MainActor in video.isPiPActive = true } }
+        func playerViewControllerDidStopPictureInPicture(_ playerViewController: AVPlayerViewController) { Task { @MainActor in video.isPiPActive = false } }
         func playerViewController(_ playerViewController: AVPlayerViewController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
-            video.isPresented = true
-            completionHandler(true)
+            Task { @MainActor in
+                video.isPresented = true
+                completionHandler(true)
+            }
         }
     }
 }
