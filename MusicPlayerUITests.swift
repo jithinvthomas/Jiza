@@ -41,16 +41,17 @@ final class MusicPlayerUITests: XCTestCase {
         menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["Choose folder"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["Open audio file"].exists)
-        XCTAssertTrue(app.buttons["Open video file"].exists)
+
         app.buttons["Choose folder"].tap()
         XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 60))
         app.buttons["Cancel"].tap()
         XCTAssertTrue(menu.waitForExistence(timeout: 3))
-        menu.tap()
-        app.buttons["Open video file"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["homeVideo"].tap()
+        app.buttons["Open video"].tap()
         XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 60))
         app.buttons["Cancel"].tap()
-        XCTAssertTrue(menu.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Open network stream"].waitForExistence(timeout: 3))
     }
 
     func testHomeChoicesAndTradingValidation() {

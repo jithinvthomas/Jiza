@@ -18,6 +18,7 @@ targets:
       - AudioPlayerModel.swift
       - VideoPlayerModel.swift
       - VideoPlayerView.swift
+      - VideoLibraryView.swift
       - ContentView.swift
       - JizaHomeView.swift
       - InteraMusicPlayerApp.swift

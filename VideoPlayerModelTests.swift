@@ -5,6 +5,62 @@ import Combine
 
 @MainActor
 final class VideoPlayerModelTests: XCTestCase {
+    func testVLCOpensMatroskaAndSupportsSeekAndSpeed() async throws {
+        let video = VideoPlayerModel(audio: music(), defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        await video.open(try fixture("sample-video", "mkv"), forceVLC: true)
+        defer { video.close() }
+        XCTAssertNil(video.errorMessage)
+        XCTAssertTrue(video.usingVLC)
+        for _ in 0..<100 {
+            if video.seekable && video.duration > 0 { break }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTAssertTrue(video.seekable)
+        XCTAssertGreaterThan(video.duration, 5)
+        video.pause()
+        video.setSpeed(1.5)
+        XCTAssertEqual(video.speed, 1.5)
+        video.seek(2)
+        XCTAssertEqual(video.position, 2, accuracy: 0.2)
+        XCTAssertFalse(video.audioChoices.isEmpty)
+    }
+
+    func testResumePositionSurvivesReopen() async throws {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let video = VideoPlayerModel(audio: music(), defaults: defaults)
+        let url = try fixture("sample-video", "mp4")
+        await video.open(url)
+        for _ in 0..<100 {
+            if video.seekable { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        video.pause()
+        video.seek(1)
+        video.close()
+        XCTAssertEqual(video.savedPosition(for: url), 1, accuracy: 0.2)
+        await video.open(url)
+        defer { video.close() }
+        for _ in 0..<100 {
+            if video.position >= 0.9 { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertGreaterThanOrEqual(video.position, 0.9)
+    }
+
+    func testVideoFolderFiltersNestedFilesAndStreamValidation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("nested"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for file in ["one.mp4", "nested/two.mkv", "music.mp3", ".hidden.mp4"] {
+            try Data().write(to: root.appendingPathComponent(file))
+        }
+        let files = try VideoLibraryModel.scanFolder(root)
+        XCTAssertEqual(Set(files.map { $0.lastPathComponent }), ["one.mp4", "two.mkv"])
+        XCTAssertNotNil(VideoPlayerModel.streamURL("https://example.com/video.m3u8"))
+        XCTAssertNotNil(VideoPlayerModel.streamURL("rtsp://example.com/live"))
+        XCTAssertNil(VideoPlayerModel.streamURL("javascript:alert(1)"))
+        XCTAssertNil(VideoPlayerModel.streamURL("https://user:password@example.com/video"))
+    }
     private func music() -> AudioPlayerModel {
         AudioPlayerModel(defaults: UserDefaults(suiteName: "VideoTests-\(UUID().uuidString)")!)
     }

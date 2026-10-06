@@ -19,8 +19,11 @@ struct InteraMusicPlayerApp: App {
                 .environmentObject(player)
                 .environmentObject(video)
                 .task { player.restoreLastFolder() }
+                .fullScreenCover(isPresented: $video.isPresented, onDismiss: {
+                    if !video.isPiPActive { video.close() }
+                }) { VideoPlayerView(video: video) }
                 .onOpenURL { url in
-                    path = ["Player"]
+                    path = [VideoPlayerModel.isVideo(url) ? "Video" : "Player"]
                     if VideoPlayerModel.isVideo(url) {
                         Task { await video.open(url) }
                     } else {

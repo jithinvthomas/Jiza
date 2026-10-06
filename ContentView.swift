@@ -65,9 +65,7 @@ struct ContentView: View {
                 player.errorMessage = "Unable to open your selection: \(error.localizedDescription)"
             }
         }
-        .fullScreenCover(isPresented: $video.isPresented, onDismiss: { video.close() }) {
-            VideoPlayerView(video: video)
-        }
+
         .alert("Jiza", isPresented: Binding(
             get: { player.errorMessage != nil },
             set: { if !$0 { player.errorMessage = nil } }
@@ -110,13 +108,7 @@ struct ContentView: View {
                 } label: {
                     Label("Open audio file", systemImage: "music.note")
                 }
-                Button {
-                    importingFolder = false
-                    importingVideo = true
-                    showImporter = true
-                } label: {
-                    Label("Open video file", systemImage: "play.rectangle")
-                }
+
                 Picker("Appearance", selection: $appearance) {
                     Text("System").tag("system")
                     Text("Light").tag("light")

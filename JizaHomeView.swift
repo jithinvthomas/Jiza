@@ -17,7 +17,8 @@ struct JizaHomeView: View {
                         .font(.largeTitle.bold())
                     Text("What would you like to open?")
                         .foregroundStyle(.secondary)
-                    entry("Player", detail: "Your music and videos")
+                    entry("Music", detail: "Your songs and playlists", route: "Player", asset: "JizaPlayer")
+                    entry("Video", detail: "Your films, series and streams")
                     entry("Browser", detail: "Explore the web")
                     entry("Trading", detail: "Your Jiza Trading workspace")
                 }
@@ -29,6 +30,7 @@ struct JizaHomeView: View {
             .navigationDestination(for: String.self) { destination in
                 switch destination {
                 case "Player": ContentView().navigationBarTitleDisplayMode(.inline)
+                case "Video": VideoLibraryView()
                 case "Browser": JizaWebEntryView(trading: false)
                 default: JizaWebEntryView(trading: true)
                 }
@@ -37,10 +39,10 @@ struct JizaHomeView: View {
         .tint(Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255))
     }
 
-    private func entry(_ title: String, detail: String) -> some View {
-        NavigationLink(value: title) {
+    private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil) -> some View {
+        NavigationLink(value: route ?? title) {
             HStack(spacing: 18) {
-                Image("Jiza" + title).resizable().scaledToFit()
+                Image(asset ?? ("Jiza" + title)).resizable().scaledToFit()
                     .frame(width: 72, height: 72)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
                     .accessibilityHidden(true)
@@ -56,7 +58,7 @@ struct JizaHomeView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("home" + title)
+        .accessibilityIdentifier("home" + (route ?? title))
     }
 }
 
