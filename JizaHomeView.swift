@@ -34,7 +34,7 @@ struct JizaHomeView: View {
                 switch destination {
                 case "Player": ContentView().navigationBarTitleDisplayMode(.inline)
                 case "Video": VideoLibraryView()
-                case "Browser": JizaWebEntryView(trading: false)
+                case "Browser": BrowserView()
                 default: JizaWebEntryView(trading: true)
                 }
             }

@@ -66,6 +66,7 @@ final class VideoLibraryModel: ObservableObject {
 }
 
 struct VideoLibraryView: View {
+    @EnvironmentObject private var browser: BrowserModel
     @EnvironmentObject private var video: VideoPlayerModel
     @StateObject private var library = VideoLibraryModel()
     @State private var search = ""
@@ -73,6 +74,8 @@ struct VideoLibraryView: View {
     @State private var importer = false
     @State private var folderImport = false
     @State private var streamSheet = false
+    @State private var showBrowser = false
+    @State private var pendingWebsite: URL?
     @State private var stream = ""
     @State private var streamError: String?
     private var visible: [URL] {
@@ -143,16 +146,24 @@ struct VideoLibraryView: View {
             case .failure(let error): library.error = error.localizedDescription
             }
         }
-        .sheet(isPresented: $streamSheet) {
+        .fullScreenCover(isPresented: $showBrowser) {
+            NavigationStack {
+                BrowserView().toolbar { ToolbarItem(placement: .navigationBarLeading) { Button("Back to videos") { showBrowser = false } } }
+            }
+        }
+        .sheet(isPresented: $streamSheet, onDismiss: {
+            if let url = pendingWebsite { browser.openWebsite(url); pendingWebsite = nil; showBrowser = true }
+        }) {
             NavigationStack {
                 Form {
-                    Section("Direct video URL") {
+                    Section("Video or website URL") {
                         TextField("https://… or rtsp://…", text: $stream)
                             .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        Text("Use a direct media or playlist URL, such as MP4 or HLS. A website page is not a video stream.").font(.footnote)
+                        Text("MP4, HLS and RTSP addresses play here. YouTube and other supported video websites open in Jiza Browser.").font(.footnote)
                         if let streamError { Text(streamError).foregroundStyle(.red) }
-                        Button("Play stream") {
+                        Button("Open video link") {
                             guard let url = VideoPlayerModel.streamURL(stream) else { streamError = "Enter a valid HTTPS or RTSP address without embedded credentials."; return }
+                            if BrowserModel.isVideoWebsite(url) { pendingWebsite = url; streamSheet = false; return }
                             streamSheet = false
                             video.setQueue([])
                             Task { await video.open(url) }

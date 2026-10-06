@@ -22,6 +22,9 @@ targets:
       - VideoLibraryView.swift
       - ContentView.swift
       - JizaHomeView.swift
+      - BrowserModel.swift
+      - BrowserDownloads.swift
+      - BrowserView.swift
       - InteraMusicPlayerApp.swift
       - Assets.xcassets
       - path: Licenses
@@ -32,6 +35,9 @@ targets:
         CFBundleDisplayName: Jiza
         UILaunchScreen: {}
         LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -62,6 +68,7 @@ targets:
     sources:
       - AudioPlayerModelTests.swift
       - VideoPlayerModelTests.swift
+      - BrowserModelTests.swift
       - path: TestFixtures
         buildPhase: resources
     dependencies:

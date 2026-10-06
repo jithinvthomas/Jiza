@@ -89,3 +89,26 @@ final class MusicPlayerUITests: XCTestCase {
         add(screenshot)
     }
 }
+
+extension MusicPlayerUITests {
+    func testBrowserTabsAndDownloadSettings() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["homeBrowser"].tap()
+        XCTAssertTrue(app.textFields["webAddress"].waitForExistence(timeout: 5))
+        app.buttons["Tabs"].tap()
+        app.buttons["New private tab"].tap()
+        XCTAssertTrue(app.staticTexts["Browse privately"].waitForExistence(timeout: 5))
+        app.buttons["Tabs"].tap()
+        capture(app, name: "Jiza Browser Tabs")
+        app.buttons["New tab"].tap()
+        app.buttons["Downloads"].tap()
+        XCTAssertTrue(app.buttons["Choose download folder"].waitForExistence(timeout: 5))
+        capture(app, name: "Jiza Browser Downloads")
+        app.buttons["Choose download folder"].tap()
+        XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 30))
+        app.buttons["Cancel"].tap()
+        app.buttons["Done"].tap()
+        capture(app, name: "Jiza Browser Start")
+    }
+}
