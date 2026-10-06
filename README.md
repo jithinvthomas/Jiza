@@ -76,3 +76,8 @@ UI tests cover the light layout, folder/video pickers and rotation back to portr
 ## Native Liquid Glass
 Build releases with Xcode 26 or newer. iOS 26 uses glassEffect and GlassEffectContainer; earlier iOS versions keep the material fallback. Reduce Transparency uses opaque panels and Reduce Motion disables interactive glass reactions. CI tests both paths.
 https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views
+
+## Jiza home
+Jiza now opens with Player, Browser, and Trading choices. Back returns to the home menu; audio remains owned by the app while switching sections. Incoming audio/video files open Player directly.
+
+Browser opens HTTPS websites inside Jiza using Safari Services. Trading saves a user-entered HTTPS server address on the device; no production address is assumed. The Python Jiza-Trading service must run on a server or authenticated development tunnel reachable from the phone. `localhost:8000` on a PC is not reachable as localhost on an iPhone. This change does not deploy or expose the trading backend.

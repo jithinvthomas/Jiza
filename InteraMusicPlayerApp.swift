@@ -3,6 +3,7 @@ import SwiftUI
 @main
 @MainActor
 struct InteraMusicPlayerApp: App {
+    @State private var path: [String] = []
     @StateObject private var player: AudioPlayerModel
     @StateObject private var video: VideoPlayerModel
 
@@ -14,11 +15,12 @@ struct InteraMusicPlayerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            JizaHomeView(path: $path)
                 .environmentObject(player)
                 .environmentObject(video)
                 .task { player.restoreLastFolder() }
                 .onOpenURL { url in
+                    path = ["Player"]
                     if VideoPlayerModel.isVideo(url) {
                         Task { await video.open(url) }
                     } else {

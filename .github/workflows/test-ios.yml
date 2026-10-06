@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/iphone-layout-folder-picker
+      - feature/jiza-home-hub
   workflow_dispatch:
 permissions:
   contents: read

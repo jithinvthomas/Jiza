@@ -5,6 +5,7 @@ final class MusicPlayerUITests: XCTestCase {
         let app = XCUIApplication()
         XCUIDevice.shared.orientation = .portrait
         app.launch()
+        app.buttons["homePlayer"].tap()
         defer {
             app.terminate()
             XCUIDevice.shared.orientation = .portrait
@@ -29,6 +30,7 @@ final class MusicPlayerUITests: XCTestCase {
         app.launchArguments = ["-jizaAppearance", "light"]
         XCUIDevice.shared.orientation = .portrait
         app.launch()
+        app.buttons["homePlayer"].tap()
         let menu = app.buttons["Music menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10))
         XCTAssertTrue(app.frame.contains(menu.frame))
@@ -51,6 +53,31 @@ final class MusicPlayerUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 3))
     }
 
+    func testHomeChoicesAndTradingValidation() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-jizaTradingAddress", ""]
+        app.launch()
+        XCTAssertTrue(app.buttons["homePlayer"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["homeBrowser"].exists)
+        XCTAssertTrue(app.buttons["homeTrading"].exists)
+        app.buttons["homeTrading"].tap()
+        let address = app.textFields["webAddress"]
+        XCTAssertTrue(address.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Open Trading"].isEnabled)
+        address.tap()
+        address.typeText("https://localhost:8000")
+        app.buttons["Open Trading"].tap()
+        XCTAssertTrue(app.staticTexts["addressError"].waitForExistence(timeout: 3))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["homeBrowser"].tap()
+        XCTAssertTrue(app.textFields["webAddress"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Open website"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["homePlayer"].tap()
+        XCTAssertTrue(app.buttons["Music menu"].waitForExistence(timeout: 3))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["homeTrading"].waitForExistence(timeout: 3))
+    }
     private func capture(_ app: XCUIApplication, name: String) {
         // Capture the display: app-only cropping can use stale portrait bounds
         // after rotation even when the app's accessibility frame is landscape.

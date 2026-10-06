@@ -19,6 +19,7 @@ targets:
       - VideoPlayerModel.swift
       - VideoPlayerView.swift
       - ContentView.swift
+      - JizaHomeView.swift
       - InteraMusicPlayerApp.swift
       - Assets.xcassets
     info:
