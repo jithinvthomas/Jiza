@@ -55,7 +55,7 @@ final class BrowserModelTests: XCTestCase {
         let existing = root.appendingPathComponent("movie.mp4")
         try Data([1, 2, 3]).write(to: existing)
         let proposed = BrowserDownloads.unusedURL(in: root, name: "../movie.mp4")
-        XCTAssertEqual(proposed.deletingLastPathComponent(), root)
+        XCTAssertEqual(proposed.deletingLastPathComponent().standardizedFileURL.path, root.standardizedFileURL.path)
         XCTAssertNotEqual(proposed, existing)
         XCTAssertEqual(try Data(contentsOf: existing), Data([1, 2, 3]))
     }

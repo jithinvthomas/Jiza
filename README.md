@@ -63,24 +63,14 @@ Repository: https://github.com/jithinvthomas/Jiza
 Library search filters the selected folder without changing the playback queue.
 UI tests cover the light layout, folder/video pickers and rotation back to portrait. Real-device checks should include dark appearance, Dynamic Type and Reduce Transparency.
 
-## Video playback
-- Choose **Open video file** from the header menu, then select a downloaded video in Files.
-- Videos open in a full-screen viewer with native play/pause and seeking controls. Tap Done to return to music.
-- Opening a video pauses music and cancels any pending music resume. Starting music closes the video.
-- File access stays active during loading and playback. Closing the viewer releases it and prevents late loading from starting playback.
-- Playback uses device-supported video codecs. MP4/MOV containers can still contain unsupported codecs; unreadable or unsupported media shows a recovery message.
-- This first video build does not include a video folder library, saved viewing positions or Picture in Picture.
-- Tests use a generated three-second H.264/AAC MP4 to check readiness, seeking, music handoff and cleanup, plus invalid-file and cancellation cases.
-- On an iPhone, test a local MP4 and MOV, an iCloud video, portrait/landscape, calls and Bluetooth disconnection. Native AVPlayer handles video interruptions; real-call behavior still needs device verification.
-
 ## Native Liquid Glass
 Build releases with Xcode 26 or newer. iOS 26 uses glassEffect and GlassEffectContainer; earlier iOS versions keep the material fallback. Reduce Transparency uses opaque panels and Reduce Motion disables interactive glass reactions. CI tests both paths.
 https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views
 
 ## Jiza home
-Jiza now opens with Player, Browser, and Trading choices. Back returns to the home menu; audio remains owned by the app while switching sections. Incoming audio/video files open Player directly.
+Jiza opens with Music, Video, Browser, and Trading choices. Incoming files open the appropriate player.
 
-Browser opens HTTPS websites inside Jiza using Safari Services. Trading saves a user-entered HTTPS server address on the device; no production address is assumed. The Python Jiza-Trading service must run on a server or authenticated development tunnel reachable from the phone. `localhost:8000` on a PC is not reachable as localhost on an iPhone. This change does not deploy or expose the trading backend.
+Browser uses WebKit with tabs, history, bookmarks and downloads. Trading saves a user-entered HTTPS server address on the device; no production address is assumed. The Python Jiza-Trading service must run on a server or authenticated development tunnel reachable from the phone. `localhost:8000` on a PC is not reachable as localhost on an iPhone. This change does not deploy or expose the trading backend.
 
 ## iPhone system playback controls
 Audio playback registers play, pause, toggle, next, previous, and seek handlers with MPRemoteCommandCenter. Now Playing includes title, duration, elapsed position, playback rate, and cover art (Jiza fallback). Opening video releases the music handlers so they cannot restart audio while video owns playback.
@@ -92,10 +82,26 @@ Reference: https://developer.apple.com/documentation/mediaplayer/mpremotecommand
 ## Expanded Video section (October 2026)
 The home menu now has Music, Video, Browser and Trading. Video has its own generated Jiza film/play logo and a separate folder library with recursive search, reverse ordering, remembered folder access, and saved playback positions. Direct HTTPS and RTSP media URLs can be opened from the library.
 
-Native playback retains Apple's transport controls, AirPlay and Picture in Picture. Files that cannot use native playback fall back to the existing MobileVLCKit dependency; the library also offers Open with VLC. Additional controls include 0.25-3x speed, Fit/Fill/Stretch, audio-track and embedded-subtitle menus, SRT/ASS/SSA/VTT import through VLC, subtitle timing adjustment, repeat, sleep timer, screen lock, brightness and system volume. VLC controls include a seek bar, double-tap +/-10 seconds and horizontal swipe seeking. Music and video retain exclusive playback ownership.
+Native playback retains Apple's transport controls, AirPlay and Picture in Picture. Files that cannot use native playback fall back to the existing MobileVLCKit dependency; the library also offers Compatibility playback. Additional controls include 0.25-3x speed, Fit/Fill/Stretch, audio-track and embedded-subtitle menus, SRT/ASS/SSA/VTT import through VLC, subtitle timing adjustment, repeat, sleep timer, screen lock, brightness and system volume. VLC controls include a seek bar, double-tap +/-10 seconds and horizontal swipe seeking. Music and video retain exclusive playback ownership.
 
-Limits: native PiP and AirPlay are not promised for VLC; VLC video pauses when the app backgrounds. No private-browser tabs, download manager, SMB/DLNA discovery, Chromecast, automatic online-subtitle search, or full parity with desktop VLC/PotPlayer is implemented. File formats/codecs and streams remain dependent on the content, device and server. Device tests are still required for PiP restoration, AirPlay, file-provider permission renewal, rotation and Bluetooth.
+Limits: native PiP and AirPlay are not promised for VLC; VLC video pauses when the app backgrounds. SMB/DLNA discovery, Chromecast, automatic online-subtitle search, and full parity with desktop VLC/PotPlayer are not implemented. File formats/codecs and streams remain dependent on the content, device and server. Device tests are still required for PiP restoration, AirPlay, file-provider permission renewal, rotation and Bluetooth.
 
 Video logo generated with the built-in image tool from the original cobalt doorway logo: preserve original mark/background and add a frosted glass film frame with a play triangle at lower right, no text. Asset: Assets.xcassets/JizaVideo.imageset/logo.png. See Licenses for VideoLAN source/license information.
 
-Phase 3 remains pending: private browser sessions, download queue/progress/cancel/resume, persistent downloaded-file library and Open in Music/Video.
+## Browser and Files-provider update
+Phase 3 now includes an embedded WKWebView browser with normal/private tabs, session restoration for normal pages, back/forward/reload, address/search entry, desktop user-agent mode, page zoom, find, sharing, persistent bookmarks, searchable history, and website-data/cookie deletion. Private tabs share an ephemeral data store until the last private tab closes, and never persist their browsing history or session URLs. Bookmarks explicitly saved from private tabs are retained.
+
+Downloads use WKDownload with progress, cancellation, and in-session resume when WebKit supplies resume data. Completed normal download records persist. Choose a destination folder in Downloads; files are saved in Jiza/Documents/Downloads and copied to the selected Files-provider folder using a remembered security-scoped bookmark and coordinated writing. If that folder is unavailable, the Jiza copy remains available for Share/Save a copy. Names are sanitized and existing files are never overwritten. Files sharing exposes the Jiza Downloads folder in Files. Private downloads still create saved files, as disclosed in the download screen. Active downloads need Jiza to stay open; background queue restoration is not implemented.
+
+Video import now coordinates reading with the Files provider and copies into an app-owned temporary file before playback, instead of rejecting files that are not materialized yet. Copies are released after playback. YouTube/Vimeo/Dailymotion page links entered in Video open in Jiza Browser; they are not passed to AVPlayer as direct streams. Website playback is subject to the website's restrictions. No YouTube extraction, DRM bypass, or universal website-video downloader is implemented. VLC wording is removed from playback controls; dependency notices remain under acknowledgements.
+
+Browser security: user input accepts HTTP/HTTPS web addresses or encoded search queries; URL credentials and file/custom-scheme navigation are rejected. WebKit handles TLS validation without custom trust bypass. HTTP pages are labelled Not secure; the ATS exception applies only to web content, as required for a general-purpose browser. This app has no JavaScript-to-native command bridge. Private storage is ephemeral, not an anonymity service.
+
+Verification: simulator tests cover coordinated MP4 copying/playback/cleanup, URL routing, private tab storage isolation, history/bookmark persistence, actual local HTTP browsing, cookies, and a WKDownload copied to a selected folder. UI tests cover tab creation and Files-folder selection. Physical-device checks remain necessary for your exact iCloud/third-party provider, YouTube playback, interrupted downloads and large files. UC Browser feature parity, ad blocking, proxy/data compression, extensions and background download restoration are not claimed.
+
+Apple API references:
+- https://developer.apple.com/documentation/foundation/nsfilecoordinator
+- https://developer.apple.com/documentation/webkit/wkdownloaddelegate
+- https://developer.apple.com/documentation/webkit/wkwebsitedatastore/nonpersistent()
+- https://developer.apple.com/documentation/webkit/wkhttpcookiestore
+- https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowsarbitraryloadsinwebcontent
