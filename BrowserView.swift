@@ -12,73 +12,11 @@ struct BrowserView: View {
     @FocusState private var addressFocused: Bool
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: browser.selected?.isPrivate == true ? "eye.slash" : browser.selected?.web.url?.scheme == "https" ? "lock" : "globe")
-                    .foregroundStyle(.secondary)
-                TextField("Search or enter website", text: $address)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.webSearch)
-                    .submitLabel(.go).focused($addressFocused).onSubmit(go)
-                    .accessibilityIdentifier("webAddress")
-                Button(action: go) { Image(systemName: "arrow.right.circle.fill") }
-                    .accessibilityLabel("Open website")
-            }.padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal).padding(.vertical, 8)
+            addressBar
             if browser.selected?.web.url?.scheme == "http" { Text("Not secure - HTTP").font(.caption).foregroundStyle(.orange) }
-            if let tab = browser.selected {
-                if tab.isPrivate {
-                    Text("Private tab · history and cookies aren't kept after closing private tabs")
-                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
-                }
-                if showFind {
-                    HStack {
-                        TextField("Find on page", text: $find).onSubmit { searchPage(tab) }
-                        Button("Find") { searchPage(tab) }
-                        Button("Done") { showFind = false }
-                    }.padding(.horizontal)
-                    if !findResult.isEmpty { Text(findResult).font(.caption) }
-                }
-                BrowserPageView(tab: tab).id(tab.id)
-            }
+            if let tab = browser.selected { content(tab) }
             Divider()
-            HStack {
-                Button { browser.selected?.web.goBack() } label: { Image(systemName: "chevron.left") }
-                    .disabled(browser.selected?.web.canGoBack != true).accessibilityLabel("Back")
-                Spacer()
-                Button { browser.selected?.web.goForward() } label: { Image(systemName: "chevron.right") }
-                    .disabled(browser.selected?.web.canGoForward != true).accessibilityLabel("Forward")
-                Spacer()
-                Button {
-                    guard let web = browser.selected?.web else { return }
-                    web.isLoading ? web.stopLoading() : web.reload()
-                } label: { Image(systemName: browser.selected?.web.isLoading == true ? "xmark" : "arrow.clockwise") }
-                    .accessibilityLabel("Reload or stop")
-                Spacer()
-                Button { panel = .tabs } label: { Label("\(browser.tabs.count)", systemImage: "square.on.square") }.accessibilityLabel("Tabs")
-                Spacer()
-                Button { panel = .downloads } label: { Image(systemName: "arrow.down.circle") }.accessibilityLabel("Downloads")
-                Spacer()
-                Menu {
-                    Button("New tab") { browser.newTab() }
-                    Button("New private tab") { browser.newTab(isPrivate: true) }
-                    Button("Bookmarks") { panel = .bookmarks }
-                    Button("Add bookmark") { browser.bookmark() }.disabled(browser.selected?.web.url == nil)
-                    Button("History") { panel = .history }
-                    Button("Website data & cookies") { panel = .data }
-                    if browser.selected?.web.url?.scheme == "http" { Text("Not secure - HTTP").font(.caption).foregroundStyle(.orange) }
-            if let tab = browser.selected {
-                        Toggle("Desktop site", isOn: Binding(get: { tab.desktop }, set: { tab.setDesktop($0) }))
-                        Button("Find on page") { showFind = true }
-                        Menu("Page size") {
-                            ForEach([0.75, 1, 1.25, 1.5, 2], id: \.self) { zoom in
-                                Button("\(Int(zoom * 100))%") { tab.web.pageZoom = zoom }
-                            }
-                        }
-                        if let url = tab.web.url {
-                            ShareLink(item: url)
-                            Button("Download this page or file") { browser.downloads.downloadPage(tab.web, isPrivate: tab.isPrivate); panel = .downloads }
-                        }
-                    }
-                } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("Browser menu")
-            }.font(.title3).buttonStyle(.borderless).padding(.horizontal, 22).frame(minHeight: 52)
+            navigationControls
         }
         .navigationTitle("Browser").navigationBarTitleDisplayMode(.inline)
         .onChange(of: browser.selectedID) { _ in syncAddress() }
@@ -86,21 +24,96 @@ struct BrowserView: View {
         .onAppear { syncAddress() }
         .sheet(item: $panel) { selectedPanel in
             NavigationStack {
-                Group {
-                    switch selectedPanel {
-                    case .tabs: tabsPanel
-                    case .bookmarks: pagesPanel(history: false)
-                    case .history: pagesPanel(history: true)
-                    case .downloads: BrowserDownloadsView(downloads: browser.downloads)
-                    case .data: BrowserDataView()
-                    }
-                }
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { panel = nil } } }
+                panelContent(selectedPanel)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { panel = nil } } }
             }
         }
         .alert("Browser", isPresented: Binding(get: { browser.error != nil }, set: { if !$0 { browser.error = nil } })) {
             Button("OK") { browser.error = nil }
         } message: { Text(browser.error ?? "") }
+    }
+    private var addressIcon: String {
+        if browser.selected?.isPrivate == true { return "eye.slash" }
+        return browser.selected?.web.url?.scheme == "https" ? "lock" : "globe"
+    }
+    private var addressBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: addressIcon).foregroundStyle(.secondary)
+            TextField("Search or enter website", text: $address)
+                .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.webSearch)
+                .submitLabel(.go).focused($addressFocused).onSubmit(go)
+                .accessibilityIdentifier("webAddress")
+            Button(action: go) { Image(systemName: "arrow.right.circle.fill") }.accessibilityLabel("Open website")
+        }.padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal).padding(.vertical, 8)
+    }
+    @ViewBuilder private func content(_ tab: BrowserTab) -> some View {
+        if tab.isPrivate {
+            Text("Private tab - history and cookies aren't kept after closing private tabs")
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+        }
+        if showFind {
+            HStack {
+                TextField("Find on page", text: $find).onSubmit { searchPage(tab) }
+                Button("Find") { searchPage(tab) }
+                Button("Done") { showFind = false }
+            }.padding(.horizontal)
+            if !findResult.isEmpty { Text(findResult).font(.caption) }
+        }
+        BrowserPageView(tab: tab).id(tab.id)
+    }
+    private var navigationControls: some View {
+        HStack {
+            Button { browser.selected?.web.goBack() } label: { Image(systemName: "chevron.left") }
+                .disabled(browser.selected?.web.canGoBack != true).accessibilityLabel("Back")
+            Spacer()
+            Button { browser.selected?.web.goForward() } label: { Image(systemName: "chevron.right") }
+                .disabled(browser.selected?.web.canGoForward != true).accessibilityLabel("Forward")
+            Spacer()
+            Button {
+                guard let web = browser.selected?.web else { return }
+                if web.isLoading { web.stopLoading() } else { web.reload() }
+            } label: { Image(systemName: browser.selected?.web.isLoading == true ? "xmark" : "arrow.clockwise") }
+                .accessibilityLabel("Reload or stop")
+            Spacer()
+            Button { panel = .tabs } label: { Label("\(browser.tabs.count)", systemImage: "square.on.square") }.accessibilityLabel("Tabs")
+            Spacer()
+            Button { panel = .downloads } label: { Image(systemName: "arrow.down.circle") }.accessibilityLabel("Downloads")
+            Spacer()
+            browserMenu
+        }.font(.title3).buttonStyle(.borderless).padding(.horizontal, 22).frame(minHeight: 52)
+    }
+    private var browserMenu: some View {
+        Menu {
+            Button("New tab") { browser.newTab() }
+            Button("New private tab") { browser.newTab(isPrivate: true) }
+            Button("Bookmarks") { panel = .bookmarks }
+            Button("Add bookmark") { browser.bookmark() }.disabled(browser.selected?.web.url == nil)
+            Button("History") { panel = .history }
+            Button("Website data & cookies") { panel = .data }
+            if let tab = browser.selected { pageMenu(tab) }
+        } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("Browser menu")
+    }
+    @ViewBuilder private func pageMenu(_ tab: BrowserTab) -> some View {
+        Toggle("Desktop site", isOn: Binding(get: { tab.desktop }, set: { tab.setDesktop($0) }))
+        Button("Find on page") { showFind = true }
+        Menu("Page size") {
+            ForEach([0.75, 1, 1.25, 1.5, 2], id: \.self) { zoom in
+                Button("\(Int(zoom * 100))%") { tab.web.pageZoom = zoom }
+            }
+        }
+        if let url = tab.web.url {
+            ShareLink(item: url)
+            Button("Download this page or file") { browser.downloads.downloadPage(tab.web, isPrivate: tab.isPrivate); panel = .downloads }
+        }
+    }
+    @ViewBuilder private func panelContent(_ value: BrowserPanel) -> some View {
+        switch value {
+        case .tabs: tabsPanel
+        case .bookmarks: pagesPanel(history: false)
+        case .history: pagesPanel(history: true)
+        case .downloads: BrowserDownloadsView(downloads: browser.downloads)
+        case .data: BrowserDataView()
+        }
     }
     private func go() { addressFocused = false; browser.navigate(address) }
     private func syncAddress() { address = browser.selected?.web.url?.absoluteString ?? ""; findResult = "" }
@@ -115,27 +128,26 @@ struct BrowserView: View {
                 Button("New tab") { browser.newTab(); panel = nil }
                 Button("New private tab") { browser.newTab(isPrivate: true); panel = nil }
             }
-            ForEach(browser.tabs) { tab in
-                HStack {
-                    Button { browser.selectedID = tab.id; panel = nil } label: {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text(tab.web.title ?? "New tab").lineLimit(1)
-                                Text(tab.web.url?.host ?? (tab.isPrivate ? "Private browsing" : "Start browsing")).font(.caption).foregroundStyle(.secondary)
-                            }
-                        } icon: { Image(systemName: tab.isPrivate ? "eye.slash" : "globe") }
-                    }.buttonStyle(.plain)
-                    Spacer()
-                    if browser.selectedID == tab.id { Image(systemName: "checkmark").foregroundStyle(.tint) }
-                    Button { browser.close(tab) } label: { Image(systemName: "xmark.circle") }.buttonStyle(.borderless).accessibilityLabel("Close tab")
-                }
-            }
+            ForEach(browser.tabs) { tab in tabRow(tab) }
         }.navigationTitle("Tabs")
     }
-    private func pagesPanel(history: Bool) -> some View {
-        BrowserPagesView(browser: browser, historyMode: history) { url in
-            browser.navigate(url.absoluteString); panel = nil
+    private func tabRow(_ tab: BrowserTab) -> some View {
+        HStack {
+            Button { browser.selectedID = tab.id; panel = nil } label: {
+                Label {
+                    VStack(alignment: .leading) {
+                        Text(tab.web.title ?? "New tab").lineLimit(1)
+                        Text(tab.web.url?.host ?? (tab.isPrivate ? "Private browsing" : "Start browsing")).font(.caption).foregroundStyle(.secondary)
+                    }
+                } icon: { Image(systemName: tab.isPrivate ? "eye.slash" : "globe") }
+            }.buttonStyle(.plain)
+            Spacer()
+            if browser.selectedID == tab.id { Image(systemName: "checkmark").foregroundStyle(.tint) }
+            Button { browser.close(tab) } label: { Image(systemName: "xmark.circle") }.buttonStyle(.borderless).accessibilityLabel("Close tab")
         }
+    }
+    private func pagesPanel(history: Bool) -> some View {
+        BrowserPagesView(browser: browser, historyMode: history) { url in browser.navigate(url.absoluteString); panel = nil }
     }
 }
 private enum BrowserPanel: String, Identifiable { case tabs, bookmarks, history, downloads, data; var id: String { rawValue } }

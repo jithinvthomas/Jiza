@@ -134,7 +134,7 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.allowsBackForwardNavigationGestures = true
         func watch<T>(_ path: KeyPath<WKWebView, T>) {
             observations.append(web.observe(path, options: [.new]) { [weak self] _, _ in
-                Task { @MainActor in self?.revision += 1; self?.owner?.objectWillChange.send() }
+                Task { @MainActor [weak self] in self?.revision += 1; self?.owner?.objectWillChange.send() }
             })
         }
         watch(\.url); watch(\.title); watch(\.estimatedProgress); watch(\.isLoading); watch(\.canGoBack); watch(\.canGoForward)

@@ -114,14 +114,14 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         canResume = false
         observation = value.progress.observe(\.fractionCompleted, options: [.initial, .new]) { [weak self] progress, _ in
             let fraction = progress.fractionCompleted
-            Task { @MainActor in self?.fraction = fraction }
+            Task { @MainActor [weak self] in self?.fraction = fraction }
         }
     }
     func cancel() {
         guard active else { return }
         active = false; status = "Cancelled"
         download?.cancel { [weak self] data in
-            Task { @MainActor in self?.resumeData = data; self?.canResume = data != nil }
+            Task { @MainActor [weak self] in self?.resumeData = data; self?.canResume = data != nil }
         }
     }
     func resume() {
