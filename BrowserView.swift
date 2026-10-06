@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 
@@ -13,7 +13,7 @@ struct BrowserView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: browser.selected?.isPrivate == true ? "eye.slash" : "globe")
+                Image(systemName: browser.selected?.isPrivate == true ? "eye.slash" : browser.selected?.web.url?.scheme == "https" ? "lock" : "globe")
                     .foregroundStyle(.secondary)
                 TextField("Search or enter website", text: $address)
                     .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.webSearch)
@@ -22,6 +22,7 @@ struct BrowserView: View {
                 Button(action: go) { Image(systemName: "arrow.right.circle.fill") }
                     .accessibilityLabel("Open website")
             }.padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal).padding(.vertical, 8)
+            if browser.selected?.web.url?.scheme == "http" { Text("Not secure - HTTP").font(.caption).foregroundStyle(.orange) }
             if let tab = browser.selected {
                 if tab.isPrivate {
                     Text("Private tab · history and cookies aren't kept after closing private tabs")
@@ -56,15 +57,16 @@ struct BrowserView: View {
                 Button { panel = .downloads } label: { Image(systemName: "arrow.down.circle") }.accessibilityLabel("Downloads")
                 Spacer()
                 Menu {
-                    Button("New tab", systemImage: "plus") { browser.newTab() }
-                    Button("New private tab", systemImage: "eye.slash") { browser.newTab(isPrivate: true) }
-                    Button("Bookmarks", systemImage: "book") { panel = .bookmarks }
-                    Button("Add bookmark", systemImage: "bookmark") { browser.bookmark() }.disabled(browser.selected?.web.url == nil)
-                    Button("History", systemImage: "clock") { panel = .history }
-                    Button("Website data & cookies", systemImage: "gearshape") { panel = .data }
-                    if let tab = browser.selected {
+                    Button("New tab") { browser.newTab() }
+                    Button("New private tab") { browser.newTab(isPrivate: true) }
+                    Button("Bookmarks") { panel = .bookmarks }
+                    Button("Add bookmark") { browser.bookmark() }.disabled(browser.selected?.web.url == nil)
+                    Button("History") { panel = .history }
+                    Button("Website data & cookies") { panel = .data }
+                    if browser.selected?.web.url?.scheme == "http" { Text("Not secure - HTTP").font(.caption).foregroundStyle(.orange) }
+            if let tab = browser.selected {
                         Toggle("Desktop site", isOn: Binding(get: { tab.desktop }, set: { tab.setDesktop($0) }))
-                        Button("Find on page", systemImage: "magnifyingglass") { showFind = true }
+                        Button("Find on page") { showFind = true }
                         Menu("Page size") {
                             ForEach([0.75, 1, 1.25, 1.5, 2], id: \.self) { zoom in
                                 Button("\(Int(zoom * 100))%") { tab.web.pageZoom = zoom }
@@ -72,7 +74,7 @@ struct BrowserView: View {
                         }
                         if let url = tab.web.url {
                             ShareLink(item: url)
-                            Button("Download this page or file", systemImage: "arrow.down") { browser.downloads.downloadPage(tab.web, isPrivate: tab.isPrivate); panel = .downloads }
+                            Button("Download this page or file") { browser.downloads.downloadPage(tab.web, isPrivate: tab.isPrivate); panel = .downloads }
                         }
                     }
                 } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("Browser menu")

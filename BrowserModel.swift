@@ -1,5 +1,6 @@
-﻿import Foundation
+import Foundation
 import WebKit
+import UIKit
 import Combine
 
 struct BrowserPage: Codable, Identifiable, Equatable {
