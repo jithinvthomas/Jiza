@@ -88,3 +88,14 @@ Audio playback registers play, pause, toggle, next, previous, and seek handlers 
 Device verification after installing this build: play a folder containing two songs, lock the iPhone, check the Now Playing title/artwork, pause/resume, scrub, and skip both directions from Control Center and a Bluetooth accessory. Repeat during video playback and after returning to music. Volume buttons retain iOS volume behavior; accessory-specific long presses only skip if the accessory emits next/previous commands. Simulator tests cannot prove physical Bluetooth or Lock Screen integration.
 
 Reference: https://developer.apple.com/documentation/mediaplayer/mpremotecommand
+
+## Expanded Video section (October 2026)
+The home menu now has Music, Video, Browser and Trading. Video has its own generated Jiza film/play logo and a separate folder library with recursive search, reverse ordering, remembered folder access, and saved playback positions. Direct HTTPS and RTSP media URLs can be opened from the library.
+
+Native playback retains Apple's transport controls, AirPlay and Picture in Picture. Files that cannot use native playback fall back to the existing MobileVLCKit dependency; the library also offers Open with VLC. Additional controls include 0.25-3x speed, Fit/Fill/Stretch, audio-track and embedded-subtitle menus, SRT/ASS/SSA/VTT import through VLC, subtitle timing adjustment, repeat, sleep timer, screen lock, brightness and system volume. VLC controls include a seek bar, double-tap +/-10 seconds and horizontal swipe seeking. Music and video retain exclusive playback ownership.
+
+Limits: native PiP and AirPlay are not promised for VLC; VLC video pauses when the app backgrounds. No private-browser tabs, download manager, SMB/DLNA discovery, Chromecast, automatic online-subtitle search, or full parity with desktop VLC/PotPlayer is implemented. File formats/codecs and streams remain dependent on the content, device and server. Device tests are still required for PiP restoration, AirPlay, file-provider permission renewal, rotation and Bluetooth.
+
+Video logo generated with the built-in image tool from the original cobalt doorway logo: preserve original mark/background and add a frosted glass film frame with a play triangle at lower right, no text. Asset: Assets.xcassets/JizaVideo.imageset/logo.png. See Licenses for VideoLAN source/license information.
+
+Phase 3 remains pending: private browser sessions, download queue/progress/cancel/resume, persistent downloaded-file library and Open in Music/Video.

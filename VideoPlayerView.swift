@@ -44,7 +44,7 @@ struct VideoPlayerView: View {
                             NativeVideoPlayer(video: video)
                         }
                         if video.isLoading {
-                            ProgressView("Opening videoâ€¦").padding(20).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
+                            ProgressView("Opening videoÃ¢â‚¬Â¦").padding(20).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
                         }
                         if let error = video.errorMessage {
                             VStack(spacing: 16) {
@@ -83,6 +83,9 @@ struct VideoPlayerView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .background && video.usingVLC { video.pause() }
         }
+        .alert("Subtitles", isPresented: Binding(get: { video.subtitleError != nil }, set: { if !$0 { video.subtitleError = nil } })) {
+            Button("OK") { video.subtitleError = nil }
+        } message: { Text(video.subtitleError ?? "") }
         .fileImporter(isPresented: $showSubtitles, allowedContentTypes: [.item]) { result in
             if case .success(let url) = result { Task { await video.addSubtitles(url) } }
         }
@@ -123,9 +126,9 @@ struct VideoPlayerView: View {
                 HStack(spacing: 20) {
                     Menu {
                         ForEach([Float(0.25), 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 3], id: \.self) { rate in
-                            Button("\(rate.formatted())Ã—") { video.setSpeed(rate) }
+                            Button("\(rate.formatted())Ãƒâ€”") { video.setSpeed(rate) }
                         }
-                    } label: { Text("\(video.speed.formatted())Ã—").frame(minHeight: 44) }.accessibilityLabel("Playback speed")
+                    } label: { Text("\(video.speed.formatted())Ãƒâ€”").frame(minHeight: 44) }.accessibilityLabel("Playback speed")
                     Menu {
                         Picker("Display", selection: $video.fit) { ForEach(VideoFit.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
                     } label: { Label(video.fit.rawValue, systemImage: "arrow.up.left.and.arrow.down.right").frame(minHeight: 44) }
@@ -136,10 +139,10 @@ struct VideoPlayerView: View {
                     Menu {
                         Button("Subtitles off") { video.selectSubtitle(-1) }
                         ForEach(video.subtitleChoices.filter { $0.id >= 0 }) { choice in Button(choice.name) { video.selectSubtitle(choice.id) } }
-                        Button("Load subtitle fileâ€¦") { showSubtitles = true }
+                        Button("Load subtitle fileÃ¢â‚¬Â¦") { showSubtitles = true }
                         if video.usingVLC {
                             Button("Delay +0.5s (\(video.subtitleDelay.formatted())s)") { video.subtitleDelay += 0.5 }
-                            Button("Delay âˆ’0.5s") { video.subtitleDelay -= 0.5 }
+                            Button("Delay Ã¢Ë†â€™0.5s") { video.subtitleDelay -= 0.5 }
                             Button("Reset subtitle timing") { video.subtitleDelay = 0 }
                         }
                     } label: { Image(systemName: "captions.bubble").frame(width: 44, height: 44) }.accessibilityLabel("Subtitles")

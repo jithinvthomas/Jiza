@@ -32,6 +32,7 @@ final class VideoPlayerModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var title = "Video"
     @Published private(set) var errorMessage: String?
+    @Published var subtitleError: String?
     @Published private(set) var usingVLC = false
     @Published private(set) var isPlaying = false
     @Published private(set) var position = 0.0
@@ -186,6 +187,7 @@ final class VideoPlayerModel: ObservableObject {
     func toggle() { isPlaying ? pause() : play() }
     func setSpeed(_ value: Float) {
         speed = min(max(value, 0.25), 3)
+        player.defaultRate = speed
         if usingVLC { vlc.rate = speed } else if player.rate != 0 { player.rate = speed }
     }
     func seek(_ seconds: Double) {
@@ -207,14 +209,18 @@ final class VideoPlayerModel: ObservableObject {
         }
     }
     func addSubtitles(_ url: URL) async {
+        subtitleError = nil
         guard let source = currentURL else { return }
         let access = VideoFileAccess(url)
-        guard ["srt", "ass", "ssa", "vtt"].contains(url.pathExtension.lowercased()) else { return }
+        guard ["srt", "ass", "ssa", "vtt"].contains(url.pathExtension.lowercased()) else {
+            subtitleError = "Choose an SRT, ASS, SSA or VTT subtitle file."
+            return
+        }
         if !usingVLC { await open(source, forceVLC: true) }
         guard usingVLC, !isLoading, errorMessage == nil, currentURL == source else { return }
         if vlc.addPlaybackSlave(url, type: .subtitle, enforce: true) == 0 {
             subtitleAccess = access
-        } else { errorMessage = "This subtitle file could not be loaded. Try an SRT, ASS, SSA or VTT file." }
+        } else { subtitleError = "This subtitle file could not be loaded. Try an SRT, ASS, SSA or VTT file." }
     }
     func setSleepTimer(minutes: Int?) { sleepUntil = minutes.map { Date().addingTimeInterval(Double($0) * 60) } }
 
@@ -232,7 +238,7 @@ final class VideoPlayerModel: ObservableObject {
         position = duration
         savePosition()
         if repeatVideo { seek(0); play() }
-        else if canGoNext { next() }
+        else if let currentURL, let index = queue.firstIndex(of: currentURL), index + 1 < queue.count { next() }
         else { pause() }
     }
     private func startTimer() {
@@ -298,6 +304,7 @@ final class VideoPlayerModel: ObservableObject {
         isPiPActive = false
         isLoading = false
         errorMessage = nil
+        subtitleError = nil
         currentURL = nil
         sleepUntil = nil
         resumeAfterInterruption = false
