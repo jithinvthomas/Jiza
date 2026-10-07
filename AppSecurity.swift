@@ -62,7 +62,7 @@ struct KeychainLockStorage: LockStorage {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(request as CFDictionary, &result)
         if status == errSecItemNotFound { return LockRecord() }
-        guard status == errSecSuccess, let data = result as? Data else { throw LockError.message("Unlock your iPhone, then retry reading the lock settings.") }
+        guard status == errSecSuccess, let data = result as? Data else { print("Jiza Keychain read status: \(status)"); throw LockError.message("Unlock your iPhone, then retry reading the lock settings.") }
         return try JSONDecoder().decode(LockRecord.self, from: data)
     }
     func write(_ record: LockRecord) throws {

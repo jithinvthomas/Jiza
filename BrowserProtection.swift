@@ -16,7 +16,7 @@ final class BrowserProtection: ObservableObject {
         self.defaults = defaults
         adBlockEnabled = defaults.bool(forKey: "jizaAdBlock")
         blockPopups = defaults.object(forKey: "jizaBlockPopups") as? Bool ?? true
-        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "JizaAds-v1", encodedContentRuleList: Self.rulesJSON) { [weak self] list, error in
+        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "JizaAds-v2", encodedContentRuleList: Self.rulesJSON) { [weak self] list, error in
             guard let self else { return }
             self.rules = list; self.ready = true
             if error != nil { self.error = "Ad blocker could not start. Retry by reopening Jiza." }
@@ -48,7 +48,9 @@ final class BrowserProtection: ObservableObject {
         var rules: [[String: Any]] = domains.map { domain in
             ["trigger": ["url-filter": "^https?://([^/]+\\.)?" + domain.replacingOccurrences(of: ".", with: "\\.") + "[:/]"], "action": ["type": "block"]]
         }
-        rules.append(["trigger": ["url-filter": "^https?://.*/(ads|adserver|adverts)/", "resource-type": ["script", "image", "raw", "document"]], "action": ["type": "block"]])
+        for path in ["ads", "adserver", "adverts"] {
+            rules.append(["trigger": ["url-filter": "^https?://.*/" + path + "/", "resource-type": ["script", "image", "raw", "document"]], "action": ["type": "block"]])
+        }
         rules.append(["trigger": ["url-filter": ".*"], "action": ["type": "css-display-none", "selector": "ins.adsbygoogle, .adsbygoogle, [id^='google_ads_iframe'], .advertisement, .ad-banner, .ad-container, [data-ad-slot]"]])
         let data = try! JSONSerialization.data(withJSONObject: rules)
         return String(decoding: data, as: UTF8.self)
