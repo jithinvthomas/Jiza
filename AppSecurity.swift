@@ -51,8 +51,9 @@ protocol LockStorage {
     func write(_ record: LockRecord) throws
 }
 struct KeychainLockStorage: LockStorage {
+    var service = "app.jiza.locks.v1"
     private var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "app.jiza.locks.v1", kSecAttrAccount as String: "local-locks"]
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "local-locks"]
     }
     func read() throws -> LockRecord {
         var request = query

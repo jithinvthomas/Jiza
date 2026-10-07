@@ -25,7 +25,7 @@ struct BrowserView: View {
         .onChange(of: browser.selected?.web.url) { _ in if !addressFocused { syncAddress() } }
         .onAppear { syncAddress(); security.browserVisible = true }
         .onDisappear { security.leaveBrowser() }
-        .onChange(of: browser.downloadNotice) { _ in panel = .downloads }
+        .onReceive(browser.downloads.$items.dropFirst()) { items in if items.first?.active == true { panel = .downloads } }
         .sheet(item: $panel) { selectedPanel in
             NavigationStack {
                 panelContent(selectedPanel)
@@ -275,7 +275,7 @@ private struct BrowserDownloadRow: View {
             if item.active {
                 ProgressView(value: item.fraction)
                 Text("\(ByteCountFormatter.string(fromByteCount: item.transferred, countStyle: .file)) / \(item.total > 0 ? ByteCountFormatter.string(fromByteCount: item.total, countStyle: .file) : "Unknown size") - \(ByteCountFormatter.string(fromByteCount: Int64(item.bytesPerSecond), countStyle: .file))/s").font(.caption)
-                HStack { Button("Pause") { item.pause() }; Button("Cancel download") { item.cancel() } }
+                if item.status == "Downloading" { HStack { Button("Pause") { item.pause() }; Button("Cancel download") { item.cancel() } } }
             }
             if item.canResume && !item.active { Button("Resume download") { item.resume() } }
             if item.canRetry && !item.canResume && !item.active { Button("Retry download") { item.retry() } }

@@ -1,5 +1,6 @@
-﻿import XCTest
+import XCTest
 import UIKit
+import Security
 @testable import InteraMusic
 
 private final class MemoryLockStorage: LockStorage {
@@ -82,5 +83,21 @@ final class AppSecurityTests: XCTestCase {
         XCTAssertFalse(coordinator.window?.isHidden == true)
         security.lock(); security.obscured = false; coordinator.refresh()
         XCTAssertFalse(coordinator.window?.isHidden == true)
+    }
+}
+
+extension AppSecurityTests {
+    func testDeviceKeychainRoundTripAndUpdate() throws {
+        let service = "app.jiza.locks.test." + UUID().uuidString
+        let storage = KeychainLockStorage(service: service)
+        defer { SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary) }
+        XCTAssertFalse(try storage.read().appLock)
+        var record = LockRecord(); record.appLock = true; record.failures = 3
+        try storage.write(record)
+        XCTAssertTrue(try storage.read().appLock)
+        XCTAssertEqual(try storage.read().failures, 3)
+        record.appLock = false
+        try storage.write(record)
+        XCTAssertFalse(try storage.read().appLock)
     }
 }

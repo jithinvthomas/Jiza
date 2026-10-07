@@ -1,6 +1,7 @@
 import Foundation
 import WebKit
 import Combine
+import UniformTypeIdentifiers
 
 struct SavedDownload: Codable {
     let name: String
@@ -161,6 +162,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
             canRetry = true; completionHandler(nil); return
         }
         name = BrowserDownloads.safeFilename(suggestedFilename)
+        if URL(fileURLWithPath: name).pathExtension.isEmpty, let mime = response.mimeType,
+           let ext = UTType(mimeType: mime)?.preferredFilenameExtension ?? (mime == "application/x-bittorrent" ? "torrent" : nil) { name += "." + ext }
         do {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("JizaDownload-" + id.uuidString, isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
