@@ -112,3 +112,22 @@ extension MusicPlayerUITests {
         capture(app, name: "Jiza Browser Start")
     }
 }
+
+extension MusicPlayerUITests {
+    func testBrowserProtectionAndLockSettingsAreAvailable() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["Privacy and locks"].tap()
+        XCTAssertTrue(app.switches["Face ID / iPhone passcode"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["newBrowserPIN"].exists)
+        XCTAssertTrue(app.secureTextFields["confirmBrowserPIN"].exists)
+        capture(app, name: "Jiza Privacy and Locks")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["homeBrowser"].tap()
+        app.buttons["Browser menu"].tap()
+        app.buttons["Ad blocker & pop-ups"].tap()
+        XCTAssertTrue(app.switches["Ad blocker"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.switches["Block pop-up windows"].exists)
+        capture(app, name: "Jiza Browser Protection")
+    }
+}
