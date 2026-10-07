@@ -1,6 +1,7 @@
 import Foundation
 import WebKit
 import Combine
+import CryptoKit
 
 @MainActor
 final class BrowserProtection: ObservableObject {
@@ -48,8 +49,9 @@ final class BrowserProtection: ObservableObject {
     private static func compiledRules() async throws -> WKContentRuleList {
         if let compilation { return try await compilation.value }
         let task = Task { @MainActor () throws -> WKContentRuleList in
-            let identifier = "Jiza-EasyList-20261007-v1"
             let encoded = try rulesJSON()
+            let fingerprint = SHA256.hash(data: Data(encoded.utf8)).map { String(format: "%02x", $0) }.joined()
+            let identifier = "Jiza-EasyList-" + fingerprint
             return try await withCheckedThrowingContinuation { continuation in
                 let store = WKContentRuleListStore.default()!
                 store.lookUpContentRuleList(forIdentifier: identifier) { existing, _ in
@@ -71,7 +73,7 @@ final class BrowserProtection: ObservableObject {
             rules.append(["trigger": ["url-filter": "^https?://.*/" + path + "/", "resource-type": ["script", "image", "raw", "document"]], "action": ["type": "block"]])
         }
         rules.append(["trigger": ["url-filter": ".*"], "action": ["type": "css-display-none", "selector": "ins.adsbygoogle, .adsbygoogle, [id^='google_ads_iframe'], .advertisement, .ad-banner, .ad-container, [data-ad-slot]"]])
-        return String(decoding: try JSONSerialization.data(withJSONObject: rules), as: UTF8.self)
+        return String(decoding: try JSONSerialization.data(withJSONObject: rules, options: [.sortedKeys]), as: UTF8.self)
     }
 }
 private final class WeakBrowserView { weak var web: WKWebView?; init(_ web: WKWebView) { self.web = web } }

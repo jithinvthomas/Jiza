@@ -124,7 +124,10 @@ extension MusicPlayerUITests {
         capture(app, name: "Jiza Privacy and Locks")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["homeBrowser"].tap()
-        app.buttons["Browser menu"].tap()
+        let browserMenu = app.buttons["Browser menu"]
+        XCTAssertTrue(browserMenu.waitForExistence(timeout: 5))
+        capture(app, name: "Jiza Browser Before Protection")
+        browserMenu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         app.buttons["Ad blocker & pop-ups"].tap()
         XCTAssertTrue(app.switches["Ad blocker"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.switches["Block pop-up windows"].exists)

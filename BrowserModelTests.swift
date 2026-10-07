@@ -123,6 +123,9 @@ extension BrowserModelTests {
         browser.downloads.useDefaultFolder()
         let tab = browser.selected!
         let base = URL(string: "http://127.0.0.1:8765")!
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        tab.web.frame = window.bounds; window.addSubview(tab.web)
+        defer { tab.web.removeFromSuperview() }
         tab.web.load(URLRequest(url: base.appendingPathComponent("links")))
         for _ in 0..<200 { if tab.web.title == "Download links" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
         XCTAssertEqual(tab.web.title, "Download links")

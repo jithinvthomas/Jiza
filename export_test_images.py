@@ -1,7 +1,9 @@
-﻿import json
+import json
 import pathlib
 import subprocess
 import sys
+import shutil
+import tempfile
 
 result = "TestResults.xcresult"
 output = pathlib.Path("test-images")
@@ -42,4 +44,18 @@ def walk(value):
             else:
                 walk(child)
 
-walk(get())
+root = get()
+walk(root)
+# Preserve native crash evidence from simulator tests, without uploading the full log archive twice.
+for action in root.get("actions", {}).get("_values", []):
+    identifier = action.get("actionResult", {}).get("diagnosticsRef", {}).get("id", {}).get("_value")
+    if not identifier:
+        continue
+    with tempfile.TemporaryDirectory() as folder:
+        target = pathlib.Path(folder) / "diagnostics"
+        exported = subprocess.run(["xcrun", "xcresulttool", "export", "--path", result, "--id", identifier,
+                                   "--type", "directory", "--output-path", str(target)])
+        if exported.returncode == 0:
+            for file in target.rglob("*"):
+                if file.suffix in (".ips", ".crash") and "InteraMusic" in file.name:
+                    shutil.copy2(file, output / file.name)

@@ -97,7 +97,7 @@ struct BrowserView: View {
             Button("Privacy & locks") { panel = .locks }
             Button("Website data & cookies") { panel = .data }
             if let tab = browser.selected { pageMenu(tab) }
-        } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("Browser menu")
+        } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44).contentShape(Rectangle()) }.accessibilityLabel("Browser menu")
     }
     @ViewBuilder private func pageMenu(_ tab: BrowserTab) -> some View {
         Toggle("Desktop site", isOn: Binding(get: { tab.desktop }, set: { tab.setDesktop($0) }))
