@@ -27,6 +27,8 @@ targets:
       - BrowserView.swift
       - BrowserDownloadPolicy.swift
       - BrowserProtection.swift
+      - path: BrowserAdDomains.json
+        buildPhase: resources
       - AppSecurity.swift
       - SecurityViews.swift
       - InteraMusicPlayerApp.swift

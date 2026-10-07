@@ -1,0 +1,11 @@
+Jiza advertising-domain filters
+
+Source: The EasyList authors (https://easylist.to/).
+Source list: https://easylist-downloads.adblockplus.org/easylist.txt
+Retrieved: 2026-10-07
+Derived domain rules: 47763
+
+This derived filter data is licensed under Creative Commons Attribution-ShareAlike 3.0 Unported.
+License: https://creativecommons.org/licenses/by-sa/3.0/
+Changes: only exact domain block rules, third-party-only domain rules and exact unscoped domain exceptions are converted to WebKit JSON. Other EasyList syntax is omitted. This is a subset, not the complete EasyList engine.
+No endorsement by the EasyList authors is implied.

@@ -339,6 +339,9 @@ private struct BrowserProtectionView: View {
                 Toggle("Ad blocker", isOn: Binding(get: { protection.adBlockEnabled }, set: { protection.setAdBlock($0) }))
                 Text("Blocks known advertising servers and common ad elements. Changing this setting reloads open tabs. Some first-party and in-video ads may remain.").font(.footnote)
                 if !protection.ready { ProgressView("Preparing filters") }
+                NavigationLink("Filter source & licence") {
+                    ScrollView { Text((Bundle.main.url(forResource: "EasyList-Attribution", withExtension: "txt").flatMap { try? String(contentsOf: $0) }) ?? "The EasyList authors, https://easylist.to/ - CC BY-SA 3.0").font(.footnote).textSelection(.enabled).padding() }.navigationTitle("Filter attribution")
+                }
                 if let error = protection.error { Text(error).foregroundStyle(.red) }
             }
             Section("Pop-ups") {

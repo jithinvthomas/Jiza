@@ -145,7 +145,7 @@ extension BrowserModelTests {
     func testAdBlockToggleActuallyBlocksAndRestoresResource() async throws {
         let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let tab = browser.selected!
-        for _ in 0..<200 { if browser.protection.ready { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+        for _ in 0..<1200 { if browser.protection.ready { break }; try await Task.sleep(nanoseconds: 50_000_000) }
         XCTAssertNil(browser.protection.error)
         for blocked in [false, true, false] {
             browser.protection.setAdBlock(blocked)
