@@ -53,7 +53,10 @@ final class BrowserProtection: ObservableObject {
             let fingerprint = SHA256.hash(data: Data(encoded.utf8)).map { String(format: "%02x", $0) }.joined()
             let identifier = "Jiza-EasyList-" + fingerprint
             return try await withCheckedThrowingContinuation { continuation in
-                let store = WKContentRuleListStore.default()!
+                guard let store = WKContentRuleListStore.default() else {
+                    continuation.resume(throwing: CocoaError(.featureUnsupported))
+                    return
+                }
                 store.lookUpContentRuleList(forIdentifier: identifier) { existing, _ in
                     if let existing { continuation.resume(returning: existing); return }
                     store.compileContentRuleList(forIdentifier: identifier, encodedContentRuleList: encoded) { rules, error in
