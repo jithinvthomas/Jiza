@@ -1,5 +1,6 @@
 import Foundation
 import WebKit
+import Combine
 
 @MainActor
 final class BrowserProtection: ObservableObject {

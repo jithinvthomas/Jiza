@@ -5,6 +5,7 @@ import SwiftUI
 struct InteraMusicPlayerApp: App {
     @StateObject private var security = AppSecurity()
     @State private var pendingFile: URL?
+    @State private var pendingAccess: VideoFileAccess?
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var browser = BrowserModel()
     @State private var path: [String] = []
@@ -32,18 +33,19 @@ struct InteraMusicPlayerApp: App {
                     if unlocked, let url = pendingFile { pendingFile = nil; openFile(url) }
                 }
                 .task { player.restoreLastFolder() }
+                .onAppear { security.returnHome = { path = []; video.close(); security.leaveBrowser() } }
                 .fullScreenCover(isPresented: $video.isPresented, onDismiss: {
                     if !video.isPiPActive { video.close() }
                 }) { VideoPlayerView(video: video) }
                 .onOpenURL { url in
-                    if security.needsAppUnlock { pendingFile = url }
+                    if security.needsAppUnlock { pendingAccess = VideoFileAccess(url); pendingFile = url }
                     else { openFile(url) }
                 }
         }
     }
     private func openFile(_ url: URL) {
         path = [VideoPlayerModel.isVideo(url) ? "Video" : "Player"]
-        if VideoPlayerModel.isVideo(url) { Task { await video.open(url) } }
-        else { video.close(); player.openIncomingFile(url) }
+        if VideoPlayerModel.isVideo(url) { Task { await video.open(url); pendingAccess = nil } }
+        else { video.close(); player.openIncomingFile(url); pendingAccess = nil }
     }
 }

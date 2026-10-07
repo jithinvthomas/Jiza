@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import UIKit
 import Combine
 
@@ -53,6 +53,7 @@ private struct SecurityShieldContent: View {
                         SecureField("Browser PIN", text: $pin).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
                             .accessibilityIdentifier("browserUnlockPIN").onSubmit(unlock)
                         Button("Unlock browser", action: unlock).buttonStyle(.borderedProminent)
+                        Button("Return home") { security.returnHome?() }
                         Button("Forgot PIN?") { confirmReset = true }.font(.footnote)
                     }
                     if security.busy { ProgressView() }
@@ -69,7 +70,7 @@ private struct SecurityShieldContent: View {
 }
 
 /// A scene-level window covers sheets, media covers and the app-switcher snapshot.
-struct SecurityShieldWindow: UIViewRepresentable {
+@MainActor struct SecurityShieldWindow: UIViewRepresentable {
     @ObservedObject var security: AppSecurity
     func makeCoordinator() -> Coordinator { Coordinator(security: security) }
     func makeUIView(context: Context) -> UIView {

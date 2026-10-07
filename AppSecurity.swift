@@ -1,4 +1,4 @@
-﻿import Foundation
+import Foundation
 import Security
 import LocalAuthentication
 import CommonCrypto
@@ -85,6 +85,7 @@ final class AppSecurity: ObservableObject {
     @Published var obscured = false
     @Published var browserVisible = false
     @Published var error: String?
+    var returnHome: (() -> Void)?
     private let storage: LockStorage
     private let authenticate: (String) async throws -> Bool
     private let now: () -> Date
@@ -96,7 +97,7 @@ final class AppSecurity: ObservableObject {
     var needsShield: Bool { needsAppUnlock || needsBrowserUnlock || (obscured && (appLockEnabled || browserLockEnabled)) }
 
     init(storage: LockStorage = KeychainLockStorage(), now: @escaping () -> Date = Date.init,
-         authenticate: @escaping (String) async throws -> Bool = AppSecurity.authenticateOwner) {
+         authenticate: @escaping (String) async throws -> Bool = { reason in try await AppSecurity.authenticateOwner(reason) }) {
         self.storage = storage; self.now = now; self.authenticate = authenticate
         reload()
     }

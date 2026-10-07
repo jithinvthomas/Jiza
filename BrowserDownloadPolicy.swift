@@ -1,5 +1,6 @@
-﻿import Foundation
+import Foundation
 import WebKit
+import UIKit
 
 /// Navigation downloads only: embedded players remain usable inside webpages.
 enum BrowserDownloadPolicy {
