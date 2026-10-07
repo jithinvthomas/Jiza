@@ -132,7 +132,7 @@ extension BrowserModelTests {
         for id in ["video", "audio", "redirect", "torrent"] {
             let count = browser.downloads.items.count
             // IDs are fixed test constants, never external page data.
-            _ = try await tab.web.evaluateJavaScript("document.getElementById('\(id)').click()")
+            _ = try await tab.web.evaluateJavaScript("document.getElementById('\(id)').click(); true")
             for _ in 0..<300 {
                 if browser.downloads.items.count > count, browser.downloads.items.first?.active == false { break }
                 try await Task.sleep(nanoseconds: 50_000_000)
