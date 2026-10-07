@@ -126,6 +126,11 @@ extension BrowserModelTests {
         let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
         tab.web.frame = window.bounds; window.addSubview(tab.web)
         defer { tab.web.removeFromSuperview() }
+        for _ in 0..<1200 {
+            if browser.protection.ready { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertTrue(browser.protection.ready, browser.protection.error ?? "Browser protection did not initialize")
         tab.web.load(URLRequest(url: base.appendingPathComponent("links")))
         for _ in 0..<200 { if tab.web.title == "Download links" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
         XCTAssertEqual(tab.web.title, "Download links")
