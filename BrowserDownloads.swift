@@ -46,6 +46,13 @@ final class BrowserDownloads: ObservableObject {
         let item = BrowserDownload(download: download, web: web, isPrivate: isPrivate, owner: self, folder: folderBookmark)
         items.insert(item, at: 0)
     }
+    func start(_ request: URLRequest, web: WKWebView, isPrivate: Bool) {
+        guard let url = request.url, BrowserModel.isWebURL(url) || url.scheme == "blob" else { error = "Enter a direct HTTP or HTTPS file URL."; return }
+        web.startDownload(using: request) { [weak self, weak web] download in
+            guard let self, let web else { return }
+            self.accept(download, web: web, isPrivate: isPrivate)
+        }
+    }
     func downloadPage(_ web: WKWebView, isPrivate: Bool) {
         guard let url = web.url, BrowserModel.isWebURL(url) else { return }
         web.startDownload(using: URLRequest(url: url)) { [weak self, weak web] download in
@@ -89,6 +96,12 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
     @Published var active = true
     @Published var localURL: URL?
     @Published var canResume = false
+    @Published var canRetry = false
+    @Published var transferred: Int64 = 0
+    @Published var total: Int64 = 0
+    @Published var bytesPerSecond = 0.0
+    private var originalRequest: URLRequest?
+    private var startedAt = Date()
     private var download: WKDownload?
     private var web: WKWebView?
     private weak var owner: BrowserDownloads?
@@ -109,17 +122,31 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
     private func attach(_ value: WKDownload) {
         download = value
         value.delegate = self
+        originalRequest = value.originalRequest ?? originalRequest
+        startedAt = Date()
+        canRetry = false
         active = true
         status = "Downloading"
         canResume = false
         observation = value.progress.observe(\.fractionCompleted, options: [.initial, .new]) { [weak self] progress, _ in
             let fraction = progress.fractionCompleted
-            Task { @MainActor [weak self] in self?.fraction = fraction }
+            let completed = progress.completedUnitCount
+            let total = progress.totalUnitCount
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.fraction = fraction; self.transferred = completed; self.total = total
+                self.bytesPerSecond = Double(completed) / max(1, Date().timeIntervalSince(self.startedAt))
+            }
         }
+    }
+    func pause() { cancel(); status = "Paused" }
+    func retry() {
+        guard !active, let web, let request = originalRequest else { return }
+        web.startDownload(using: request) { [weak self] in self?.attach($0) }
     }
     func cancel() {
         guard active else { return }
-        active = false; status = "Cancelled"
+        active = false; status = "Cancelled"; canRetry = originalRequest?.httpMethod == "GET"
         download?.cancel { [weak self] data in
             Task { @MainActor [weak self] in self?.resumeData = data; self?.canResume = data != nil }
         }
@@ -129,6 +156,10 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         web.resumeDownload(fromResumeData: resumeData) { [weak self] in self?.attach($0) }
     }
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        if let response = response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
+            active = false; status = "Server returned HTTP \(response.statusCode). Sign in or refresh the download link, then retry."
+            canRetry = true; completionHandler(nil); return
+        }
         name = BrowserDownloads.safeFilename(suggestedFilename)
         do {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("JizaDownload-" + id.uuidString, isDirectory: true)
@@ -181,8 +212,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
     }
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         active = false
-        if status != "Cancelled" { status = "Failed: " + error.localizedDescription }
-        self.resumeData = resumeData; canResume = resumeData != nil
+        if status != "Cancelled" && status != "Paused" { status = "Failed: " + error.localizedDescription }
+        self.resumeData = resumeData; canResume = resumeData != nil; canRetry = originalRequest?.httpMethod == "GET"
         observation = nil
     }
 }

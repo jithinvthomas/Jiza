@@ -3,7 +3,9 @@ import WebKit
 import UniformTypeIdentifiers
 
 struct BrowserView: View {
+    @EnvironmentObject private var security: AppSecurity
     @EnvironmentObject private var browser: BrowserModel
+    @State private var media: [BrowserMediaLink] = []
     @State private var address = ""
     @State private var panel: BrowserPanel?
     @State private var find = ""
@@ -21,7 +23,9 @@ struct BrowserView: View {
         .navigationTitle("Browser").navigationBarTitleDisplayMode(.inline)
         .onChange(of: browser.selectedID) { _ in syncAddress() }
         .onChange(of: browser.selected?.web.url) { _ in if !addressFocused { syncAddress() } }
-        .onAppear { syncAddress() }
+        .onAppear { syncAddress(); security.browserVisible = true }
+        .onDisappear { security.leaveBrowser() }
+        .onChange(of: browser.downloadNotice) { _ in panel = .downloads }
         .sheet(item: $panel) { selectedPanel in
             NavigationStack {
                 panelContent(selectedPanel)
@@ -89,12 +93,16 @@ struct BrowserView: View {
             Button("Bookmarks") { panel = .bookmarks }
             Button("Add bookmark") { browser.bookmark() }.disabled(browser.selected?.web.url == nil)
             Button("History") { panel = .history }
+            Button("Ad blocker & pop-ups") { panel = .protection }
+            Button("Privacy & locks") { panel = .locks }
             Button("Website data & cookies") { panel = .data }
             if let tab = browser.selected { pageMenu(tab) }
         } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("Browser menu")
     }
     @ViewBuilder private func pageMenu(_ tab: BrowserTab) -> some View {
         Toggle("Desktop site", isOn: Binding(get: { tab.desktop }, set: { tab.setDesktop($0) }))
+        Toggle("Automatically download file links", isOn: Binding(get: { browser.automaticallyDownloadFiles }, set: { browser.automaticallyDownloadFiles = $0 }))
+        Button("Download media on this page") { Task { media = await tab.findMedia(); panel = .media } }
         Button("Find on page") { showFind = true }
         Menu("Page size") {
             ForEach([0.75, 1, 1.25, 1.5, 2], id: \.self) { zoom in
@@ -113,6 +121,17 @@ struct BrowserView: View {
         case .history: pagesPanel(history: true)
         case .downloads: BrowserDownloadsView(downloads: browser.downloads)
         case .data: BrowserDataView()
+        case .protection: BrowserProtectionView(protection: browser.protection)
+        case .locks: SecuritySettingsView()
+        case .media:
+            List {
+                if media.isEmpty { Text("No direct media files found. Encrypted video, segmented streams and media inside other frames may not expose a downloadable file.").foregroundStyle(.secondary) }
+                ForEach(media) { item in
+                    Button { browser.selected?.downloadLink(item.url); panel = .downloads } label: {
+                        VStack(alignment: .leading) { Text(item.label); Text(item.url.lastPathComponent).font(.caption).lineLimit(2) }
+                    }
+                }
+            }.navigationTitle("Page media")
         }
     }
     private func go() { addressFocused = false; browser.navigate(address) }
@@ -150,7 +169,7 @@ struct BrowserView: View {
         BrowserPagesView(browser: browser, historyMode: history) { url in browser.navigate(url.absoluteString); panel = nil }
     }
 }
-private enum BrowserPanel: String, Identifiable { case tabs, bookmarks, history, downloads, data; var id: String { rawValue } }
+private enum BrowserPanel: String, Identifiable { case tabs, bookmarks, history, downloads, data, protection, locks, media; var id: String { rawValue } }
 
 private struct BrowserPageView: View {
     @ObservedObject var tab: BrowserTab
@@ -210,11 +229,21 @@ private struct BrowserPagesView: View {
 }
 
 private struct BrowserDownloadsView: View {
+    @EnvironmentObject private var browser: BrowserModel
     @ObservedObject var downloads: BrowserDownloads
+    @State private var address = ""
     @State private var chooseFolder = false
     @State private var exportURL: ExportedFile?
     var body: some View {
         List {
+            Section("Add download") {
+                TextField("Direct file URL", text: $address).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                Button("Download URL") {
+                    guard let url = URL(string: address.trimmingCharacters(in: .whitespacesAndNewlines)), BrowserModel.isWebURL(url), let tab = browser.selected else { downloads.error = "Enter a complete HTTP or HTTPS file URL."; return }
+                    downloads.start(URLRequest(url: url), web: tab.web, isPrivate: tab.isPrivate); address = ""
+                }
+                Text("Any direct file type, including .torrent files. Long-press a webpage link and choose Download link. A .torrent file is metadata; this does not run a BitTorrent transfer.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("Save downloads to") {
                 Text(downloads.folderName).font(.subheadline)
                 Button("Choose download folder") { chooseFolder = true }
@@ -243,8 +272,13 @@ private struct BrowserDownloadRow: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(item.name).font(.headline)
             Text(item.status).font(.caption).foregroundStyle(.secondary)
-            if item.active { ProgressView(value: item.fraction); Button("Cancel download") { item.cancel() } }
+            if item.active {
+                ProgressView(value: item.fraction)
+                Text("\(ByteCountFormatter.string(fromByteCount: item.transferred, countStyle: .file)) / \(item.total > 0 ? ByteCountFormatter.string(fromByteCount: item.total, countStyle: .file) : "Unknown size") - \(ByteCountFormatter.string(fromByteCount: Int64(item.bytesPerSecond), countStyle: .file))/s").font(.caption)
+                HStack { Button("Pause") { item.pause() }; Button("Cancel download") { item.cancel() } }
+            }
             if item.canResume && !item.active { Button("Resume download") { item.resume() } }
+            if item.canRetry && !item.canResume && !item.active { Button("Retry download") { item.retry() } }
             if let url = item.localURL {
                 HStack { ShareLink(item: url); Spacer(); Button("Save a copy") { export(url) } }
             }
@@ -294,5 +328,23 @@ private struct BrowserDataView: View {
         WKWebsiteDataStore.default().fetchDataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes()) { values in
             records = values.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }; busy = false
         }
+    }
+}
+
+private struct BrowserProtectionView: View {
+    @ObservedObject var protection: BrowserProtection
+    var body: some View {
+        Form {
+            Section("Ads") {
+                Toggle("Ad blocker", isOn: Binding(get: { protection.adBlockEnabled }, set: { protection.setAdBlock($0) }))
+                Text("Blocks known advertising servers and common ad elements. Changing this setting reloads open tabs. Some first-party and in-video ads may remain.").font(.footnote)
+                if !protection.ready { ProgressView("Preparing filters") }
+                if let error = protection.error { Text(error).foregroundStyle(.red) }
+            }
+            Section("Pop-ups") {
+                Toggle("Block pop-up windows", isOn: Binding(get: { protection.blockPopups }, set: { protection.setPopups($0) }))
+                Text("Blocks script-created windows. Links you deliberately open in a new tab and file downloads remain available.").font(.footnote)
+            }
+        }.navigationTitle("Browser protection")
     }
 }

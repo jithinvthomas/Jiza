@@ -22,13 +22,20 @@ final class BrowserModel: ObservableObject {
     @Published var bookmarks: [BrowserPage] = []
     @Published var history: [BrowserPage] = []
     @Published var error: String?
+    @Published var downloadNotice = 0
+    var automaticallyDownloadFiles: Bool {
+        get { defaults.object(forKey: "jizaAutoDownloads") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "jizaAutoDownloads"); objectWillChange.send() }
+    }
     let downloads = BrowserDownloads()
+    let protection: BrowserProtection
     let defaults: UserDefaults
     private var privateStore = WKWebsiteDataStore.nonPersistent()
     var selected: BrowserTab? { tabs.first { $0.id == selectedID } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        protection = BrowserProtection(defaults: defaults)
         bookmarks = decode([BrowserPage].self, key: "jizaBookmarks") ?? []
         history = decode([BrowserPage].self, key: "jizaHistory") ?? []
         if let session = decode(BrowserSession.self, key: "jizaBrowserSession") {
@@ -65,6 +72,7 @@ final class BrowserModel: ObservableObject {
         config.websiteDataStore = isPrivate ? privateStore : .default()
         config.allowsInlineMediaPlayback = true
         let tab = BrowserTab(configuration: config, isPrivate: isPrivate, owner: self)
+        protection.register(tab.web)
         tabs.append(tab)
         selectedID = tab.id
         if let url, Self.isWebURL(url) { tab.web.load(URLRequest(url: url)) }
@@ -123,6 +131,8 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
     @Published var revision = 0
     @Published var desktop = false
     @Published var pageError: String?
+    var popupParentID: UUID?
+    private var committed = false
     private var observations: [NSKeyValueObservation] = []
     init(configuration: WKWebViewConfiguration, isPrivate: Bool, owner: BrowserModel) {
         self.isPrivate = isPrivate
@@ -145,7 +155,7 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.reload()
     }
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { pageError = nil }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { owner?.visit(self) }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { committed = true; owner?.visit(self) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { report(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { report(error) }
     private func report(_ error: Error) { if (error as NSError).code != NSURLErrorCancelled { pageError = error.localizedDescription } }
@@ -157,17 +167,45 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
             pageError = "This link requires another app or uses an unsupported address."
             decisionHandler(.cancel); return
         }
-        decisionHandler(action.shouldPerformDownload ? .download : .allow)
+        let file = owner?.automaticallyDownloadFiles == true && action.targetFrame?.isMainFrame != false && BrowserDownloadPolicy.isFileLink(url)
+        if action.shouldPerformDownload || file {
+            if action.targetFrame == nil {
+                owner?.downloads.start(action.request, web: webView, isPrivate: isPrivate)
+                decisionHandler(.cancel)
+            } else { decisionHandler(.download) }
+        } else if let protection = owner?.protection {
+            protection.whenReady { decisionHandler(.allow) }
+        } else { decisionHandler(.allow) }
     }
     func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         let attachment = (response.response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition")?.lowercased().contains("attachment") == true
-        decisionHandler(attachment || !response.canShowMIMEType ? .download : .allow)
+        let media = BrowserDownloadPolicy.shouldDownload(mime: response.response.mimeType, disposition: nil, mainFrame: response.isForMainFrame, enabled: owner?.automaticallyDownloadFiles == true)
+        decisionHandler(attachment || media || !response.canShowMIMEType ? .download : .allow)
     }
-    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { owner?.downloads.accept(download, web: webView, isPrivate: isPrivate) }
-    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) { owner?.downloads.accept(download, web: webView, isPrivate: isPrivate) }
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { acceptDownload(download, web: webView) }
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) { acceptDownload(download, web: webView) }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         guard action.targetFrame == nil, let url = action.request.url, BrowserModel.isWebURL(url) else { return nil }
-        return owner?.newTab(isPrivate: isPrivate, configuration: configuration).web
+        if owner?.automaticallyDownloadFiles == true && BrowserDownloadPolicy.isFileLink(url) {
+            owner?.downloads.start(action.request, web: webView, isPrivate: isPrivate)
+            return nil
+        }
+        if owner?.protection.blockPopups == true && action.navigationType != .linkActivated {
+            pageError = "Pop-up blocked. You can allow pop-ups in Browser protection."
+            return nil
+        }
+        let tab = owner?.newTab(isPrivate: isPrivate, configuration: configuration)
+        tab?.popupParentID = id
+        return tab?.web
+    }
+    private func acceptDownload(_ download: WKDownload, web: WKWebView) {
+        owner?.downloads.accept(download, web: web, isPrivate: isPrivate)
+        owner?.downloadNotice += 1
+        if !committed, let parent = popupParentID, let owner {
+            owner.tabs.removeAll { $0.id == id }
+            owner.selectedID = owner.tabs.first(where: { $0.id == parent })?.id ?? owner.tabs.first?.id
+            owner.persistSession()
+        }
     }
     func webViewDidClose(_ webView: WKWebView) { owner?.close(self) }
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {

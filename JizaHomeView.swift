@@ -29,7 +29,10 @@ struct JizaHomeView: View {
             }
             .navigationTitle("Jiza")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .principal) { JizaWordmark(height: 32) } }
+            .toolbar {
+                ToolbarItem(placement: .principal) { JizaWordmark(height: 32) }
+                ToolbarItem(placement: .navigationBarTrailing) { NavigationLink { SecuritySettingsView() } label: { Image(systemName: "lock.shield") }.accessibilityLabel("Privacy and locks") }
+            }
             .navigationDestination(for: String.self) { destination in
                 switch destination {
                 case "Player": ContentView().navigationBarTitleDisplayMode(.inline)

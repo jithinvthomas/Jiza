@@ -108,3 +108,55 @@ extension BrowserModelTests {
         XCTAssertTrue(BrowserModel(defaults: browser.defaults).history.isEmpty)
     }
 }
+
+extension BrowserModelTests {
+    func testMediaResponsesDownloadOnlyForTopLevelNavigation() {
+        XCTAssertTrue(BrowserDownloadPolicy.shouldDownload(mime: "video/mp4", disposition: nil, mainFrame: true, enabled: true))
+        XCTAssertTrue(BrowserDownloadPolicy.shouldDownload(mime: "audio/mpeg", disposition: nil, mainFrame: true, enabled: true))
+        XCTAssertFalse(BrowserDownloadPolicy.shouldDownload(mime: "video/mp4", disposition: nil, mainFrame: false, enabled: true))
+        XCTAssertFalse(BrowserDownloadPolicy.shouldDownload(mime: "video/mp4", disposition: nil, mainFrame: true, enabled: false))
+        XCTAssertFalse(BrowserDownloadPolicy.shouldDownload(mime: "text/html", disposition: nil, mainFrame: true, enabled: true))
+        XCTAssertTrue(BrowserDownloadPolicy.isFileLink(URL(string: "https://example.com/file.torrent?token=123")!))
+    }
+    func testClickedNewTabMediaRedirectAndTorrentBecomeFiles() async throws {
+        let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        browser.downloads.useDefaultFolder()
+        let tab = browser.selected!
+        let base = URL(string: "http://127.0.0.1:8765")!
+        tab.web.load(URLRequest(url: base.appendingPathComponent("links")))
+        for _ in 0..<200 { if tab.web.title == "Download links" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+        XCTAssertEqual(tab.web.title, "Download links")
+        for id in ["video", "audio", "redirect", "torrent"] {
+            let count = browser.downloads.items.count
+            // IDs are fixed test constants, never external page data.
+            _ = try await tab.web.evaluateJavaScript("document.getElementById('\(id)').click()")
+            for _ in 0..<300 {
+                if browser.downloads.items.count > count, browser.downloads.items.first?.active == false { break }
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+            XCTAssertEqual(browser.downloads.items.count, count + 1, id)
+            let item = try XCTUnwrap(browser.downloads.items.first)
+            let file = try XCTUnwrap(item.localURL, "\(id): \(item.status)")
+            XCTAssertGreaterThan(try Data(contentsOf: file).count, 0)
+            try FileManager.default.removeItem(at: file); browser.downloads.remove(item)
+            XCTAssertEqual(browser.tabs.count, 1, "Download must not leave an empty tab")
+        }
+    }
+    func testAdBlockToggleActuallyBlocksAndRestoresResource() async throws {
+        let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let tab = browser.selected!
+        for _ in 0..<200 { if browser.protection.ready { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+        XCTAssertNil(browser.protection.error)
+        for blocked in [false, true, false] {
+            browser.protection.setAdBlock(blocked)
+            tab.web.load(URLRequest(url: URL(string: "http://127.0.0.1:8765/ad-test?\(UUID().uuidString)")!))
+            for _ in 0..<200 { if !tab.web.isLoading && tab.web.title == "Ad test" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+            let loaded = try await tab.web.evaluateJavaScript("Boolean(window.jizaAdLoaded)") as? Bool
+            XCTAssertEqual(loaded, !blocked)
+        }
+        browser.protection.setPopups(false)
+        XCTAssertTrue(tab.web.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        browser.protection.setPopups(true)
+        XCTAssertFalse(tab.web.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+    }
+}

@@ -25,6 +25,10 @@ targets:
       - BrowserModel.swift
       - BrowserDownloads.swift
       - BrowserView.swift
+      - BrowserDownloadPolicy.swift
+      - BrowserProtection.swift
+      - AppSecurity.swift
+      - SecurityViews.swift
       - InteraMusicPlayerApp.swift
       - Assets.xcassets
       - path: Licenses
@@ -33,6 +37,7 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: Jiza
+        NSFaceIDUsageDescription: Unlock Jiza and manage your browser PIN with Face ID.
         UILaunchScreen: {}
         LSSupportsOpeningDocumentsInPlace: true
         UIFileSharingEnabled: true
@@ -69,6 +74,7 @@ targets:
       - AudioPlayerModelTests.swift
       - VideoPlayerModelTests.swift
       - BrowserModelTests.swift
+      - AppSecurityTests.swift
       - path: TestFixtures
         buildPhase: resources
     dependencies:
