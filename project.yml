@@ -22,6 +22,7 @@ targets:
       - VideoLibraryView.swift
       - ContentView.swift
       - JizaHomeView.swift
+      - JizaDesign.swift
       - BrowserModel.swift
       - BrowserDownloads.swift
       - BrowserView.swift

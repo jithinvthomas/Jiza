@@ -290,7 +290,7 @@ struct ContentView: View {
 }
 
 
-private struct JizaGlassGroup: ViewModifier {
+struct JizaGlassGroup: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
@@ -304,7 +304,7 @@ private struct JizaGlassGroup: ViewModifier {
     }
 }
 
-private struct JizaGlassSurface: ViewModifier {
+struct JizaGlassSurface: ViewModifier {
     let radius: CGFloat
     var interactive = false
     @Environment(\.colorScheme) private var scheme

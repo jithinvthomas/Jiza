@@ -16,6 +16,7 @@ struct VideoPlayerView: View {
     @State private var scrub = 0.0
     @State private var isScrubbing = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
@@ -58,10 +59,11 @@ struct VideoPlayerView: View {
                     .overlay {
                         if fullScreen && controlsVisible {
                             VStack {
-                                header.background(.black.opacity(0.65))
+                                header.modifier(JizaSurface(radius: 22)).padding(.horizontal, 10)
                                 Spacer()
-                                if video.errorMessage == nil { controls.background(.black.opacity(0.65)) }
+                                if video.errorMessage == nil { controls.modifier(JizaSurface(radius: 26)).padding(.horizontal, 10) }
                             }
+                            .modifier(JizaGlassGroup()).transition(.opacity)
                         }
                     }
                     if controlsVisible && !fullScreen && video.errorMessage == nil {
@@ -85,6 +87,7 @@ struct VideoPlayerView: View {
         }
         .foregroundStyle(.white).tint(.white).background(.black).preferredColorScheme(.dark)
         .statusBar(hidden: fullScreen && !controlsVisible)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: controlsVisible)
         .task(id: hideGeneration) {
             guard fullScreen, controlsVisible, !locked, !isScrubbing, !showSubtitles,
                   video.errorMessage == nil, !UIAccessibility.isVoiceOverRunning else { return }

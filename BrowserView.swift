@@ -17,10 +17,10 @@ struct BrowserView: View {
             addressBar
             if browser.selected?.web.url?.scheme == "http" { Text("Not secure - HTTP").font(.caption).foregroundStyle(.orange) }
             if let tab = browser.selected { content(tab) }
-            Divider()
             navigationControls
         }
         .navigationTitle("Browser").navigationBarTitleDisplayMode(.inline)
+        .background(JizaPalette.background)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) { JizaWordmark(height: 18); Text("Browser").font(.headline) }
@@ -52,7 +52,7 @@ struct BrowserView: View {
                 .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.webSearch)
                 .submitLabel(.go).focused($addressFocused).onSubmit(go)
                 .accessibilityIdentifier("webAddress")
-            Button(action: go) { Image(systemName: "arrow.right.circle.fill") }.accessibilityLabel("Open website")
+            Button(action: go) { Image(systemName: "arrow.right.circle.fill").frame(width: 44, height: 44) }.accessibilityLabel("Open website")
             if !address.isEmpty {
                 Button {
                     address = ""
@@ -62,7 +62,7 @@ struct BrowserView: View {
                         .frame(width: 44, height: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("Clear address").accessibilityIdentifier("clearWebAddress")
             }
-        }.padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal).padding(.vertical, 8)
+        }.padding(.horizontal, 12).padding(.vertical, 2).modifier(JizaSurface(radius: 18)).padding(.horizontal).padding(.vertical, 8)
     }
     @ViewBuilder private func content(_ tab: BrowserTab) -> some View {
         if tab.isPrivate {
@@ -81,24 +81,27 @@ struct BrowserView: View {
     }
     private var navigationControls: some View {
         HStack {
-            Button { browser.selected?.web.goBack() } label: { Image(systemName: "chevron.left") }
+            Button { browser.selected?.web.goBack() } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
                 .disabled(browser.selected?.web.canGoBack != true).accessibilityLabel("Back")
             Spacer()
-            Button { browser.selected?.web.goForward() } label: { Image(systemName: "chevron.right") }
+            Button { browser.selected?.web.goForward() } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
                 .disabled(browser.selected?.web.canGoForward != true).accessibilityLabel("Forward")
             Spacer()
             Button {
                 guard let web = browser.selected?.web else { return }
                 if web.isLoading { web.stopLoading() } else { web.reload() }
-            } label: { Image(systemName: browser.selected?.web.isLoading == true ? "xmark" : "arrow.clockwise") }
+            } label: { Image(systemName: browser.selected?.web.isLoading == true ? "xmark" : "arrow.clockwise").frame(width: 44, height: 44) }
                 .accessibilityLabel("Reload or stop")
             Spacer()
-            Button { panel = .tabs } label: { Label("\(browser.tabs.count)", systemImage: "square.on.square") }.accessibilityLabel("Tabs")
+            Button { panel = .tabs } label: {
+                ZStack { Image(systemName: "square"); Text("\(browser.tabs.count)").font(.system(size: 10, weight: .semibold, design: .rounded)) }.frame(width: 44, height: 44)
+            }.accessibilityLabel("Tabs").accessibilityValue("\(browser.tabs.count) open tabs")
             Spacer()
-            Button { panel = .downloads } label: { Image(systemName: "arrow.down.circle") }.accessibilityLabel("Downloads")
+            Button { panel = .downloads } label: { Image(systemName: "arrow.down.circle").frame(width: 44, height: 44) }.accessibilityLabel("Downloads")
             Spacer()
             browserMenu
-        }.font(.title3).buttonStyle(.borderless).padding(.horizontal, 22).frame(minHeight: 52)
+        }.font(.title3).buttonStyle(.borderless).padding(.horizontal, 8).frame(minHeight: 56)
+            .modifier(JizaSurface(radius: 28, interactive: true)).padding(.horizontal, 12).padding(.vertical, 8)
     }
     private var browserMenu: some View {
         Menu {
@@ -271,7 +274,7 @@ private struct BrowserDownloadsView: View {
                         .swipeActions { Button("Forget", role: .destructive) { downloads.remove(item) } }
                 }
             }
-        }.navigationTitle("Downloads")
+        }.navigationTitle("Downloads").scrollContentBackground(.hidden).background(JizaPalette.background)
             .fileImporter(isPresented: $chooseFolder, allowedContentTypes: [.folder]) { result in
                 switch result { case .success(let url): downloads.chooseFolder(url); case .failure(let error): downloads.error = error.localizedDescription }
             }
@@ -284,8 +287,16 @@ private struct BrowserDownloadRow: View {
     let export: (URL) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(item.name).font(.headline)
-            Text(item.status).font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: item.active ? "arrow.down" : item.localURL != nil ? "checkmark" : "exclamationmark")
+                    .font(.headline).foregroundStyle(item.localURL != nil ? Color.green : JizaPalette.cobalt)
+                    .frame(width: 40, height: 40).background(JizaPalette.background, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name).font(.headline).lineLimit(2)
+                    Text(item.status).font(.caption).foregroundStyle(.secondary)
+                }
+            }
             if item.active {
                 ProgressView(value: item.fraction)
                 Text("\(ByteCountFormatter.string(fromByteCount: item.transferred, countStyle: .file)) / \(item.total > 0 ? ByteCountFormatter.string(fromByteCount: item.total, countStyle: .file) : "Unknown size") - \(ByteCountFormatter.string(fromByteCount: Int64(item.bytesPerSecond), countStyle: .file))/s").font(.caption)

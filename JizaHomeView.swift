@@ -3,30 +3,36 @@ import SafariServices
 
 struct JizaHomeView: View {
     @Binding var path: [String]
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @AppStorage("jizaAppearance") private var appearance = "system"
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 24) {
                     HStack(spacing: 16) {
                         Image("JizaSymbol").resizable().scaledToFit()
                             .frame(width: 56, height: 56)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Choose your space").font(.title2.bold())
-                            Text("Music, video and more").font(.subheadline).foregroundStyle(.secondary)
+                            Text("Your space.").font(.system(.largeTitle, design: .rounded, weight: .bold))
+                            Text("Listen, watch, explore.").font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
-                    entry("Music", detail: "Your songs and playlists", route: "Player", asset: "JizaPlayer")
-                    entry("Video", detail: "Your films, series and streams")
-                    entry("Browser", detail: "Explore the web")
-                    entry("Trading", detail: "Your Jiza Trading workspace")
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 14) {
+                        entry("Music", detail: "Songs & playlists", route: "Player", asset: "JizaPlayer")
+                        entry("Video", detail: "Films & streams")
+                        entry("Browser", detail: "Web & downloads")
+                        entry("Trading", detail: "Your workspace")
+                    }
+                    .modifier(JizaGlassGroup())
                 }
                 .padding(24)
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
             }
+            .background { JizaBackdrop().ignoresSafeArea() }
             .navigationTitle("Jiza")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -43,27 +49,30 @@ struct JizaHomeView: View {
             }
         }
         .tint(Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255))
+        .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light)
     }
 
     private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil) -> some View {
         NavigationLink(value: route ?? title) {
-            HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
                 Image(asset ?? ("Jiza" + title)).resizable().scaledToFit()
                     .frame(width: 72, height: 72)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
                     .accessibilityHidden(true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 5) {
                     Text(title).font(.title2.bold())
                     Text(detail).font(.subheadline).foregroundStyle(.secondary)
                 }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").accessibilityHidden(true)
             }
-            .padding(16)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+            .modifier(JizaSurface(interactive: true))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(JizaPressStyle())
         .accessibilityIdentifier("home" + (route ?? title))
     }
 }
