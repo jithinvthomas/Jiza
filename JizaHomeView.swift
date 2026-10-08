@@ -79,7 +79,7 @@ struct JizaHomeView: View {
 
 struct JizaWebEntryView: View {
     let trading: Bool
-    @AppStorage("jizaTradingAddress") private var tradingAddress = ""
+    @AppStorage("jizaTradingAddress") private var tradingAddress = "https://trade.jiza.app"
     @State private var address = ""
     @State private var presentedURL: WebDestination?
     @State private var error: String?
@@ -119,7 +119,9 @@ struct JizaWebEntryView: View {
         }
         .navigationTitle(trading ? "Trading" : "Browser")
         .onAppear {
-            if trading && address.isEmpty { address = tradingAddress }
+            if trading && address.isEmpty {
+                address = tradingAddress.isEmpty ? "https://trade.jiza.app" : tradingAddress
+            }
         }
         .fullScreenCover(item: $presentedURL) { destination in
             JizaSafariView(url: destination.url).ignoresSafeArea()
@@ -161,6 +163,7 @@ private struct JizaSafariView: UIViewControllerRepresentable {
 
 /// Use the approved lettering as an alpha mask, preserving its shape exactly.
 struct JizaWordmark: View {
+    @Environment(\.colorScheme) private var colorScheme
     var height: CGFloat = 44
     var body: some View {
         Image("JizaWordmark")
@@ -168,11 +171,9 @@ struct JizaWordmark: View {
             .resizable()
             .scaledToFit()
             .frame(width: height * 2, height: height)
-            .foregroundStyle(.white)
+            .foregroundStyle(colorScheme == .dark ? Color.white : Color(red: 24 / 255, green: 33 / 255, blue: 57 / 255))
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityLabel("Jiza")
             .accessibilityAddTraits(.isHeader)
     }
