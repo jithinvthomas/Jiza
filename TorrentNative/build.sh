@@ -12,7 +12,7 @@ fi
 cmake -S TorrentNative -B "NativeBuild/$sdk" \
   -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$sdk" -DCMAKE_OSX_ARCHITECTURES="$arch" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 -DCMAKE_BUILD_TYPE=Release \
-  -DTORRENT_SOURCE="$PWD/NativeBuild/libtorrent" -DBOOST_ROOT="$(brew --prefix boost)"
+  -DTORRENT_SOURCE="$PWD/NativeBuild/libtorrent" -DBoost_INCLUDE_DIR="$(brew --prefix boost)/include" -DBoost_NO_BOOST_CMAKE=ON
 cmake --build "NativeBuild/$sdk" --parallel 3
 libtool -static -o "NativeBuild/$sdk/libJizaTorrentCombined.a" "NativeBuild/$sdk/libJizaTorrent.a" "NativeBuild/$sdk/libtorrent/libtorrent-rasterbar.a"
 cp NativeBuild/libtorrent/LICENSE Licenses/libtorrent.txt
