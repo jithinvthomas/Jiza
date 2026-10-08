@@ -2,6 +2,11 @@ import SwiftUI
 
 enum JizaPalette {
     static let cobalt = Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255)
+    static let accent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 145 / 255, green: 179 / 255, blue: 1, alpha: 1)
+            : UIColor(red: 49 / 255, green: 91 / 255, blue: 235 / 255, alpha: 1)
+    })
     static let background = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 16 / 255, green: 24 / 255, blue: 44 / 255, alpha: 1)

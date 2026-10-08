@@ -204,6 +204,7 @@ private struct BrowserPageView: View {
                 VStack(spacing: 16) {
                     Spacer()
                     Image("JizaBrowser").resizable().scaledToFit().frame(width: 90, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     Text(tab.isPrivate ? "Browse privately" : "Explore with Jiza").font(.title2.bold())
                     Text("Search, open websites, and keep your favourite pages together.").foregroundStyle(.secondary).multilineTextAlignment(.center)
                     Spacer()

@@ -79,6 +79,11 @@ final class MusicPlayerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Music menu"].waitForExistence(timeout: 3))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["homeTrading"].waitForExistence(timeout: 3))
+        app.terminate()
+        app.launchArguments = ["-jizaAppearance", "dark"]
+        app.launch()
+        XCTAssertTrue(app.buttons["homeBrowser"].waitForExistence(timeout: 10))
+        capture(app, name: "Jiza Glass Home Dark")
     }
     private func capture(_ app: XCUIApplication, name: String) {
         // Capture the display: app-only cropping can use stale portrait bounds

@@ -48,7 +48,7 @@ struct JizaHomeView: View {
                 }
             }
         }
-        .tint(Color(red: 49 / 255, green: 91 / 255, blue: 235 / 255))
+        .tint(JizaPalette.accent)
         .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light)
     }
 
