@@ -33,16 +33,19 @@ struct VideoPlayerView: View {
                                 .ignoresSafeArea(edges: fullScreen ? .all : [])
                         }
                         if video.usingVLC || fullScreen {
-                            HStack(spacing: 0) {
-                                seekZone(-10)
-                                seekZone(10)
+                            Color.clear.contentShape(Rectangle())
+                            .onTapGesture(count: 2) { location in
+                                video.skip(location.x < geometry.size.width / 2 ? -10 : 10)
+                                revealControls()
                             }
+                            .onTapGesture { if fullScreen { revealControls() } else { controlsVisible.toggle() } }
                             .gesture(DragGesture(minimumDistance: 25).onEnded { value in
                                 if abs(value.translation.width) > abs(value.translation.height) {
                                     video.skip(Double(value.translation.width / max(geometry.size.width, 1)) * 120)
                                     revealControls()
                                 }
                             })
+                            .accessibilityHidden(true)
                         }
                         if video.isLoading {
                             ProgressView("Opening videoÃ¢â‚¬Â¦").padding(20).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
@@ -132,13 +135,6 @@ struct VideoPlayerView: View {
     private func revealControls() {
         controlsVisible = true
         hideGeneration += 1
-    }
-
-    private func seekZone(_ seconds: Double) -> some View {
-        Color.clear.contentShape(Rectangle())
-            .onTapGesture(count: 2) { video.skip(seconds); revealControls() }
-            .onTapGesture { if fullScreen { revealControls() } else { controlsVisible.toggle() } }
-            .accessibilityHidden(true)
     }
 
     private var controls: some View {
