@@ -98,6 +98,10 @@ extension MusicPlayerUITests {
         let address = app.textFields["webAddress"]
         XCTAssertTrue(address.waitForExistence(timeout: 10))
         address.tap()
+        if app.buttons["clearWebAddress"].exists { app.buttons["clearWebAddress"].tap() }
+        address.typeText("remove-this.example")
+        app.buttons["clearWebAddress"].tap()
+        XCTAssertFalse(app.buttons["clearWebAddress"].exists)
         address.typeText("http://127.0.0.1:8765/interactions")
         app.buttons["Open website"].tap()
         let pageLoad = app.webViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Page load ")).firstMatch

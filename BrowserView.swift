@@ -48,6 +48,15 @@ struct BrowserView: View {
                 .submitLabel(.go).focused($addressFocused).onSubmit(go)
                 .accessibilityIdentifier("webAddress")
             Button(action: go) { Image(systemName: "arrow.right.circle.fill") }.accessibilityLabel("Open website")
+            if !address.isEmpty {
+                Button {
+                    address = ""
+                    addressFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel("Clear address").accessibilityIdentifier("clearWebAddress")
+            }
         }.padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal).padding(.vertical, 8)
     }
     @ViewBuilder private func content(_ tab: BrowserTab) -> some View {
