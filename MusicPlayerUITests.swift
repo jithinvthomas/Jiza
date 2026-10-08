@@ -125,7 +125,7 @@ extension MusicPlayerUITests {
         app.buttons["Open in new tab"].tap()
         XCTAssertTrue(app.webViews.staticTexts["Browser fixture"].waitForExistence(timeout: 30))
         app.buttons["Tabs"].tap()
-        XCTAssertTrue(app.buttons["Close tab"].count >= 2)
+        XCTAssertTrue(app.buttons.matching(identifier: "Close tab").count >= 2)
     }
 
     func testBrowserTabsAndDownloadSettings() {
