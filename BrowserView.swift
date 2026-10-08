@@ -248,7 +248,7 @@ private struct BrowserPagesView: View {
 
 struct BrowserDownloadsView: View {
     @ObservedObject private var torrents = TorrentModel.shared
-    @State private var chooseTorrent = false
+    @State private var pickingTorrent = false
     @EnvironmentObject private var browser: BrowserModel
     @ObservedObject var downloads: BrowserDownloads
     @State private var address = ""
@@ -258,7 +258,7 @@ struct BrowserDownloadsView: View {
     var body: some View {
         List {
             Section("Torrents on this iPhone") {
-                Button("Open .torrent file") { chooseTorrent = true }
+                Button("Open .torrent file") { pickingTorrent = true; chooseFolder = true }
                     .accessibilityIdentifier("openTorrentFile")
                 Text("Downloads save in Jiza / Downloads / Torrents. Keep Jiza open while downloading; iOS can suspend transfers in the background.").font(.caption).foregroundStyle(.secondary)
                 ForEach(torrents.rows.indices, id: \.self) { index in
@@ -295,7 +295,7 @@ struct BrowserDownloadsView: View {
             }
             Section("Save downloads to") {
                 Text(downloads.folderName).font(.subheadline)
-                Button("Choose download folder") { chooseFolder = true }
+                Button("Choose download folder") { pickingTorrent = false; chooseFolder = true }
                 Button("Use Jiza Downloads folder") { downloads.useDefaultFolder() }
                 Text("Downloads also keep a copy in Jiza. Private downloads are saved files too. Keep Jiza open until downloads finish.").font(.caption).foregroundStyle(.secondary)
             }
@@ -317,14 +317,12 @@ struct BrowserDownloadsView: View {
                     do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { break }
                 }
             }
-            .fileImporter(isPresented: $chooseTorrent, allowedContentTypes: [.data, .item]) { result in
+            .fileImporter(isPresented: $chooseFolder, allowedContentTypes: pickingTorrent ? [.data, .item] : [.folder]) { result in
                 switch result {
-                case .success(let url): torrents.importFile(url)
-                case .failure(let error): torrents.error = error.localizedDescription
+                case .success(let url):
+                    if pickingTorrent { torrents.importFile(url) } else { downloads.chooseFolder(url) }
+                case .failure(let error): downloads.error = error.localizedDescription
                 }
-            }
-            .fileImporter(isPresented: $chooseFolder, allowedContentTypes: [.folder]) { result in
-                switch result { case .success(let url): downloads.chooseFolder(url); case .failure(let error): downloads.error = error.localizedDescription }
             }
             .sheet(item: $exportURL) { ExportDownload(url: $0.url) }
             .alert("Downloads", isPresented: Binding(get: { downloads.error != nil }, set: { if !$0 { downloads.error = nil } })) { Button("OK") { downloads.error = nil } } message: { Text(downloads.error ?? "") }
