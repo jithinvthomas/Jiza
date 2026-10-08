@@ -32,7 +32,13 @@ struct VideoPlayerView: View {
                             NativeVideoPlayer(video: video, showsControls: !fullScreen)
                                 .ignoresSafeArea(edges: fullScreen ? .all : [])
                         }
-                        if video.usingVLC || fullScreen {
+                        if fullScreen && !controlsVisible {
+                            Button(action: revealControls) {
+                                Color.black.opacity(0.001)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain).accessibilityLabel("Show video controls")
+                        } else if video.usingVLC || fullScreen {
                             Color.clear.contentShape(Rectangle())
                             .onTapGesture(count: 2) { location in
                                 video.skip(location.x < geometry.size.width / 2 ? -10 : 10)
