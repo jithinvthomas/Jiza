@@ -9,7 +9,6 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parent
 PROJECT = ROOT.parent
 ASSETS = {
-    **{f"brand-{name}.svg": f"Assets.xcassets/Jiza{title}Brand.imageset/jiza-{name}.svg" for title, name in [("Music", "music"), ("Video", "video"), ("Browser", "browser"), ("Trading", "trading"), ("Downloader", "download")]},
     **{f"lettering-{name}.png": f"Brand/jiza-lettering-{name}-v1.png" for name in ["music", "video", "browser", "download", "trading"]},
     "symbol.png": "Assets.xcassets/JizaSymbol.imageset/jiza-symbol.png",
     "wordmark.png": "Assets.xcassets/JizaWordmark.imageset/wordmark.png",

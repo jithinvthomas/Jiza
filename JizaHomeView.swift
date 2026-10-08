@@ -22,11 +22,11 @@ struct JizaHomeView: View {
                         }
                     }
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 14) {
-                        entry("Music", detail: "Songs & playlists", route: "Player", asset: "JizaPlayer", lettering: "JizaMusicBrand")
-                        entry("Video", detail: "Films & streams", lettering: "JizaVideoBrand")
-                        entry("Browser", detail: "Web & downloads", lettering: "JizaBrowserBrand")
-                        entry("Downloader", detail: "Files & links", asset: "JizaBrowser", lettering: "JizaDownloaderBrand")
-                        entry("Trading", detail: "Your workspace", lettering: "JizaTradingBrand")
+                        entry("Music", detail: "Songs & playlists", route: "Player", asset: "JizaPlayer")
+                        entry("Video", detail: "Films & streams")
+                        entry("Browser", detail: "Web & downloads")
+                        entry("Downloader", detail: "Files & links", asset: "JizaBrowser")
+                        entry("Trading", detail: "Your workspace")
                     }
                     .modifier(JizaGlassGroup())
                 }
@@ -43,11 +43,11 @@ struct JizaHomeView: View {
             }
             .navigationDestination(for: String.self) { destination in
                 switch destination {
-                case "Player": ContentView().navigationBarTitleDisplayMode(.inline)
-                case "Video": VideoLibraryView()
-                case "Browser": BrowserView()
-                case "Downloader": BrowserDownloadsView(downloads: browser.downloads)
-                default: JizaWebEntryView(trading: true)
+                case "Player": ContentView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                case "Video": VideoLibraryView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                case "Browser": BrowserView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                case "Downloader": BrowserDownloadsView(downloads: browser.downloads).navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                default: JizaWebEntryView(trading: true).navigationTitle("").navigationBarTitleDisplayMode(.inline)
                 }
             }
         }
@@ -55,7 +55,7 @@ struct JizaHomeView: View {
         .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light)
     }
 
-    private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil, lettering: String) -> some View {
+    private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil) -> some View {
         NavigationLink(value: route ?? title) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
@@ -67,7 +67,9 @@ struct JizaHomeView: View {
                     Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 5) {
-                    JizaSectionLettering(asset: lettering, title: "Jiza " + title, height: 24)
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
                     Text(detail).font(.subheadline).foregroundStyle(.secondary)
                 }
             }
@@ -77,24 +79,6 @@ struct JizaHomeView: View {
         }
         .buttonStyle(JizaPressStyle())
         .accessibilityIdentifier("home" + (route ?? title))
-    }
-}
-
-struct JizaSectionLettering: View {
-    @Environment(\.colorScheme) private var colorScheme
-    let asset: String
-    let title: String
-    var height: CGFloat = 21
-
-    var body: some View {
-        Image(asset)
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(width: height * 5, height: height, alignment: .leading)
-            .foregroundStyle(colorScheme == .dark ? Color.white : Color(red: 24 / 255, green: 33 / 255, blue: 57 / 255))
-            .accessibilityLabel(title)
-            .accessibilityAddTraits(.isHeader)
     }
 }
 
