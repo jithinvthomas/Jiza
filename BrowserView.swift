@@ -246,15 +246,23 @@ private struct BrowserPagesView: View {
     }
 }
 
-private struct BrowserDownloadsView: View {
+struct BrowserDownloadsView: View {
     @EnvironmentObject private var browser: BrowserModel
     @ObservedObject var downloads: BrowserDownloads
     @State private var address = ""
     @State private var chooseFolder = false
     @State private var exportURL: ExportedFile?
+    @State private var sharedFiles: [URL] = []
     var body: some View {
         List {
             Section("Add download") {
+                ForEach(sharedFiles, id: \.self) { file in
+                    Button("Shared: " + file.lastPathComponent) {
+                        if file.lastPathComponent == "Shared link.txt", let text = try? String(contentsOf: file, encoding: .utf8) { address = text }
+                        else { exportURL = ExportedFile(url: file) }
+                    }
+                }
+                Button("Refresh shared files") { sharedFiles = (try? SharedInbox.files()) ?? [] }
                 TextField("Direct file URL", text: $address).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 Button("Download URL") {
                     guard let url = URL(string: address.trimmingCharacters(in: .whitespacesAndNewlines)), BrowserModel.isWebURL(url), let tab = browser.selected else { downloads.error = "Enter a complete HTTP or HTTPS file URL."; return }
@@ -275,7 +283,8 @@ private struct BrowserDownloadsView: View {
                         .swipeActions { Button("Forget", role: .destructive) { downloads.remove(item) } }
                 }
             }
-        }.navigationTitle("Downloads").scrollContentBackground(.hidden).background(JizaPalette.background)
+        }.navigationTitle("Downloader").scrollContentBackground(.hidden).background(JizaPalette.background)
+            .onAppear { sharedFiles = (try? SharedInbox.files()) ?? [] }
             .fileImporter(isPresented: $chooseFolder, allowedContentTypes: [.folder]) { result in
                 switch result { case .success(let url): downloads.chooseFolder(url); case .failure(let error): downloads.error = error.localizedDescription }
             }

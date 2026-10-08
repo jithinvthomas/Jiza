@@ -3,6 +3,7 @@ import SafariServices
 
 struct JizaHomeView: View {
     @Binding var path: [String]
+    @EnvironmentObject private var browser: BrowserModel
     @Environment(\.dynamicTypeSize) private var typeSize
     @AppStorage("jizaAppearance") private var appearance = "system"
 
@@ -24,6 +25,7 @@ struct JizaHomeView: View {
                         entry("Music", detail: "Songs & playlists", route: "Player", asset: "JizaPlayer")
                         entry("Video", detail: "Films & streams")
                         entry("Browser", detail: "Web & downloads")
+                        entry("Downloader", detail: "Files & links", asset: "JizaBrowser")
                         entry("Trading", detail: "Your workspace")
                     }
                     .modifier(JizaGlassGroup())
@@ -44,6 +46,7 @@ struct JizaHomeView: View {
                 case "Player": ContentView().navigationBarTitleDisplayMode(.inline)
                 case "Video": VideoLibraryView()
                 case "Browser": BrowserView()
+                case "Downloader": BrowserDownloadsView(downloads: browser.downloads)
                 default: JizaWebEntryView(trading: true)
                 }
             }
