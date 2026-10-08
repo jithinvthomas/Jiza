@@ -53,6 +53,13 @@ struct InteraMusicPlayerApp: App {
         }
     }
     private func openFile(_ url: URL) {
+        if url.pathExtension.lowercased() == "torrent" || url.scheme == "magnet" {
+            path = ["Downloader"]
+            if url.isFileURL { TorrentModel.shared.importFile(url) }
+            else { TorrentModel.shared.start(url.absoluteString) }
+            pendingAccess = nil
+            return
+        }
         path = [VideoPlayerModel.isVideo(url) ? "Video" : "Player"]
         if VideoPlayerModel.isVideo(url) { Task { await video.open(url); pendingAccess = nil } }
         else { video.close(); player.openIncomingFile(url); pendingAccess = nil }

@@ -29,6 +29,7 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: |
+          bash TorrentNative/build.sh iphonesimulator "$(uname -m)"
           xcodegen generate
           sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' InteraMusicPlayer.xcodeproj/project.pbxproj
       - name: Select available iPhone simulator
