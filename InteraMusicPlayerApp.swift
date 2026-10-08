@@ -32,7 +32,16 @@ struct InteraMusicPlayerApp: App {
                 .onChange(of: security.appUnlocked) { unlocked in
                     if unlocked, let url = pendingFile { pendingFile = nil; openFile(url) }
                 }
-                .task { player.restoreLastFolder() }
+                .task {
+                    player.restoreLastFolder()
+                    #if DEBUG
+                    // Local fixture only; release builds never accept a test launch path.
+                    if ProcessInfo.processInfo.arguments.contains("-jiza-video-ui-test") {
+                        await video.open(URL(string: "http://127.0.0.1:8765/movie.mp4")!,
+                                         forceVLC: ProcessInfo.processInfo.arguments.contains("-jiza-video-compatibility-test"))
+                    }
+                    #endif
+                }
                 .onAppear { security.returnHome = { path = []; video.close(); security.leaveBrowser() } }
                 .fullScreenCover(isPresented: $video.isPresented, onDismiss: {
                     if !video.isPiPActive { video.close() }

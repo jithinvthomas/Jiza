@@ -91,6 +91,29 @@ final class MusicPlayerUITests: XCTestCase {
 }
 
 extension MusicPlayerUITests {
+    func testNativeFullScreenControlsHideAndReturn() { verifyFullScreenControls(compatibility: false) }
+    func testCompatibilityFullScreenControlsHideAndReturn() { verifyFullScreenControls(compatibility: true) }
+    private func verifyFullScreenControls(compatibility: Bool) {
+        let app = XCUIApplication()
+        app.launchArguments = ["-jiza-video-ui-test"]
+        if compatibility { app.launchArguments.append("-jiza-video-compatibility-test") }
+        app.launch()
+        let enter = app.buttons["Enter full screen"]
+        XCTAssertTrue(enter.waitForExistence(timeout: 30))
+        enter.tap()
+        let exit = app.buttons["Exit full screen"]
+        XCTAssertTrue(exit.waitForExistence(timeout: 5))
+        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !exit.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 8), .completed)
+        capture(app, name: compatibility ? "Jiza Compatibility Full Screen" : "Jiza Native Full Screen")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(exit.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.sliders["Video position"].exists)
+        exit.tap()
+        XCTAssertTrue(enter.waitForExistence(timeout: 3))
+        app.buttons["Close video"].tap()
+    }
+
     func testBrowserPullRefreshAndLinkActions() {
         let app = XCUIApplication()
         app.launch()

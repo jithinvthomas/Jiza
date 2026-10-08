@@ -11,6 +11,8 @@ struct VideoPlayerView: View {
     @State private var brightness = Double(UIScreen.main.brightness)
     @State private var originalBrightness: CGFloat?
     @State private var controlsVisible = true
+    @State private var fullScreen = false
+    @State private var hideGeneration = 0
     @State private var scrub = 0.0
     @State private var isScrubbing = false
     @Environment(\.scenePhase) private var scenePhase
@@ -20,17 +22,16 @@ struct VideoPlayerView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    if controlsVisible {
-                        HStack {
-                            Button { video.close() } label: { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Close video")
-                            Text(video.title).font(.headline).lineLimit(1)
-                            Spacer()
-                            Button { locked = true } label: { Image(systemName: "lock").frame(width: 44, height: 44) }.accessibilityLabel("Lock video controls")
-                        }.padding(.horizontal, 10)
-                    }
+                    if controlsVisible && !fullScreen { header }
                     ZStack {
                         if video.usingVLC {
                             VLCVideoSurface(video: video)
+                                .ignoresSafeArea(edges: fullScreen ? .all : [])
+                        } else {
+                            NativeVideoPlayer(video: video, showsControls: !fullScreen)
+                                .ignoresSafeArea(edges: fullScreen ? .all : [])
+                        }
+                        if video.usingVLC || fullScreen {
                             HStack(spacing: 0) {
                                 seekZone(-10)
                                 seekZone(10)
@@ -38,10 +39,9 @@ struct VideoPlayerView: View {
                             .gesture(DragGesture(minimumDistance: 25).onEnded { value in
                                 if abs(value.translation.width) > abs(value.translation.height) {
                                     video.skip(Double(value.translation.width / max(geometry.size.width, 1)) * 120)
+                                    revealControls()
                                 }
                             })
-                        } else {
-                            NativeVideoPlayer(video: video)
                         }
                         if video.isLoading {
                             ProgressView("Opening videoÃ¢â‚¬Â¦").padding(20).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
@@ -55,7 +55,16 @@ struct VideoPlayerView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    if controlsVisible && video.errorMessage == nil {
+                    .overlay {
+                        if fullScreen && controlsVisible {
+                            VStack {
+                                header.background(.black.opacity(0.65))
+                                Spacer()
+                                if video.errorMessage == nil { controls.background(.black.opacity(0.65)) }
+                            }
+                        }
+                    }
+                    if controlsVisible && !fullScreen && video.errorMessage == nil {
                         controls
                     }
                 }
@@ -75,6 +84,19 @@ struct VideoPlayerView: View {
             }
         }
         .foregroundStyle(.white).tint(.white).background(.black).preferredColorScheme(.dark)
+        .statusBar(hidden: fullScreen && !controlsVisible)
+        .task(id: hideGeneration) {
+            guard fullScreen, controlsVisible, !locked, !isScrubbing, !showSubtitles,
+                  video.errorMessage == nil, !UIAccessibility.isVoiceOverRunning else { return }
+            do { try await Task.sleep(nanoseconds: 5_000_000_000) } catch { return }
+            guard !Task.isCancelled else { return }
+            controlsVisible = false
+        }
+        .onChange(of: fullScreen) { _ in revealControls() }
+        .onChange(of: locked) { _ in revealControls() }
+        .onChange(of: isScrubbing) { _ in revealControls() }
+        .onChange(of: showSubtitles) { _ in revealControls() }
+        .onChange(of: video.errorMessage) { _ in revealControls() }
         .onAppear { originalBrightness = UIScreen.main.brightness; UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear {
             if let originalBrightness { UIScreen.main.brightness = originalBrightness }
@@ -91,16 +113,34 @@ struct VideoPlayerView: View {
         }
     }
 
+    private var header: some View {
+        HStack {
+            Button { video.close() } label: { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Close video")
+            JizaWordmark(height: 18)
+            Text(video.title).font(.headline).lineLimit(1)
+            Spacer()
+            Button { fullScreen.toggle() } label: {
+                Image(systemName: fullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right").frame(width: 44, height: 44)
+            }.accessibilityLabel(fullScreen ? "Exit full screen" : "Enter full screen")
+            Button { locked = true } label: { Image(systemName: "lock").frame(width: 44, height: 44) }.accessibilityLabel("Lock video controls")
+        }.padding(.horizontal, 10)
+            .simultaneousGesture(TapGesture().onEnded { revealControls() })
+    }
+    private func revealControls() {
+        controlsVisible = true
+        hideGeneration += 1
+    }
+
     private func seekZone(_ seconds: Double) -> some View {
         Color.clear.contentShape(Rectangle())
-            .onTapGesture(count: 2) { video.skip(seconds) }
-            .onTapGesture { controlsVisible.toggle() }
+            .onTapGesture(count: 2) { video.skip(seconds); revealControls() }
+            .onTapGesture { if fullScreen { revealControls() } else { controlsVisible.toggle() } }
             .accessibilityHidden(true)
     }
 
     private var controls: some View {
         VStack(spacing: 8) {
-            if video.usingVLC {
+            if video.usingVLC || fullScreen {
                 Slider(value: Binding(get: { isScrubbing ? scrub : video.position }, set: { scrub = $0 }),
                        in: 0...max(1, video.duration), onEditingChanged: { editing in
                     if editing { scrub = video.position }
@@ -164,6 +204,8 @@ struct VideoPlayerView: View {
                 SystemVolume().frame(width: 130, height: 30).accessibilityLabel("System volume")
             }
         }.padding(.horizontal, 18).padding(.bottom, 12)
+            .simultaneousGesture(TapGesture().onEnded { revealControls() })
+            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in hideGeneration += 1 }.onEnded { _ in revealControls() })
     }
 }
 
@@ -179,6 +221,7 @@ private struct SystemVolume: UIViewRepresentable {
 
 private struct NativeVideoPlayer: UIViewControllerRepresentable {
     @ObservedObject var video: VideoPlayerModel
+    var showsControls: Bool
     func makeCoordinator() -> Coordinator { Coordinator(video: video) }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
@@ -186,10 +229,12 @@ private struct NativeVideoPlayer: UIViewControllerRepresentable {
         controller.delegate = context.coordinator
         controller.allowsPictureInPicturePlayback = true
         controller.canStartPictureInPictureAutomaticallyFromInline = true
+        controller.showsPlaybackControls = showsControls
         return controller
     }
     func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
         controller.player = video.player
+        controller.showsPlaybackControls = showsControls
         controller.videoGravity = video.fit == .fit ? .resizeAspect : video.fit == .fill ? .resizeAspectFill : .resize
     }
     static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {

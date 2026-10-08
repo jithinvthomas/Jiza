@@ -21,6 +21,11 @@ struct BrowserView: View {
             navigationControls
         }
         .navigationTitle("Browser").navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) { JizaWordmark(height: 18); Text("Browser").font(.headline) }
+            }
+        }
         .onChange(of: browser.selectedID) { _ in syncAddress() }
         .onChange(of: browser.selected?.web.url) { _ in if !addressFocused { syncAddress() } }
         .onAppear { syncAddress(); security.browserVisible = true }
