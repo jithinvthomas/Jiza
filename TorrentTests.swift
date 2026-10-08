@@ -1,5 +1,5 @@
 import XCTest
-@testable import InteraMusicPlayer
+@testable import InteraMusic
 
 final class TorrentTests: XCTestCase {
     func testInvalidMagnetDoesNotCreateDownload() {
