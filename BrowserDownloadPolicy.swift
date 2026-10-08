@@ -38,9 +38,32 @@ extension BrowserTab {
     }
     func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
         guard let url = elementInfo.linkURL, BrowserModel.isWebURL(url) else { completionHandler(nil); return }
-        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] suggested in
-            let download = UIAction(title: "Download link", image: UIImage(systemName: "arrow.down.circle")) { [weak self] _ in self?.downloadLink(url) }
-            return UIMenu(children: [download] + suggested)
+        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            self?.linkMenu(for: url) ?? UIMenu(children: [])
         })
+    }
+    func linkMenu(for url: URL) -> UIMenu {
+        guard BrowserModel.isWebURL(url) else { return UIMenu(children: []) }
+        return UIMenu(children: [
+            UIAction(title: "Open in new tab", image: UIImage(systemName: "plus.square.on.square")) { [weak self] _ in
+                guard let self else { return }
+                self.owner?.newTab(url: url, isPrivate: self.isPrivate)
+            },
+            UIAction(title: "Open in private tab", image: UIImage(systemName: "eye.slash")) { [weak self] _ in
+                self?.owner?.newTab(url: url, isPrivate: true)
+            },
+            UIAction(title: "Download link", image: UIImage(systemName: "arrow.down.circle")) { [weak self] _ in self?.downloadLink(url) },
+            UIAction(title: "Save bookmark", image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.owner?.bookmark(url) },
+            UIAction(title: "Copy link", image: UIImage(systemName: "doc.on.doc")) { _ in UIPasteboard.general.url = url },
+            UIAction(title: "Share link", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in self?.shareLink(url) }
+        ])
+    }
+    private func shareLink(_ url: URL) {
+        guard var controller = web.window?.rootViewController else { return }
+        while let presented = controller.presentedViewController { controller = presented }
+        let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        sheet.popoverPresentationController?.sourceView = web
+        sheet.popoverPresentationController?.sourceRect = CGRect(x: web.bounds.midX, y: web.bounds.midY, width: 1, height: 1)
+        controller.present(sheet, animated: true)
     }
 }

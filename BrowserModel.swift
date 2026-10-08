@@ -105,8 +105,12 @@ final class BrowserModel: ObservableObject {
     }
     func bookmark() {
         guard let tab = selected, let url = tab.web.url, Self.isWebURL(url) else { return }
+        bookmark(url, title: tab.web.title)
+    }
+    func bookmark(_ url: URL, title: String? = nil) {
+        guard Self.isWebURL(url) else { return }
         bookmarks.removeAll { $0.url == url }
-        bookmarks.insert(BrowserPage(title: tab.web.title ?? url.host ?? "Website", url: url), at: 0)
+        bookmarks.insert(BrowserPage(title: title ?? url.host ?? "Website", url: url), at: 0)
         encode(bookmarks, key: "jizaBookmarks")
     }
     func deleteBookmark(_ id: UUID) { bookmarks.removeAll { $0.id == id }; encode(bookmarks, key: "jizaBookmarks") }
@@ -142,9 +146,20 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.navigationDelegate = self
         web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
+        web.allowsLinkPreview = true
+        let refresh = UIRefreshControl()
+        refresh.accessibilityLabel = "Refresh page"
+        refresh.addTarget(self, action: #selector(refreshPage), for: .valueChanged)
+        web.scrollView.refreshControl = refresh
+        web.scrollView.alwaysBounceVertical = true
         func watch<T>(_ path: KeyPath<WKWebView, T>) {
             observations.append(web.observe(path, options: [.new]) { [weak self] _, _ in
-                Task { @MainActor [weak self] in self?.revision += 1; self?.owner?.objectWillChange.send() }
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.revision += 1
+                    if !self.web.isLoading { self.web.scrollView.refreshControl?.endRefreshing() }
+                    self.owner?.objectWillChange.send()
+                }
             })
         }
         watch(\.url); watch(\.title); watch(\.estimatedProgress); watch(\.isLoading); watch(\.canGoBack); watch(\.canGoForward)
@@ -154,12 +169,19 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.customUserAgent = enabled ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15" : nil
         web.reload()
     }
+    @objc func refreshPage() {
+        pageError = nil
+        if web.reload() == nil { web.scrollView.refreshControl?.endRefreshing() }
+    }
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { pageError = nil }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { committed = true; owner?.visit(self) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { report(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { report(error) }
     private func report(_ error: Error) { if (error as NSError).code != NSURLErrorCancelled { pageError = error.localizedDescription } }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { pageError = "This page stopped responding. Reload to continue." }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        web.scrollView.refreshControl?.endRefreshing()
+        pageError = "This page stopped responding. Reload to continue."
+    }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
         // Only web navigation; never execute pasted script/file/custom-scheme URLs.

@@ -91,6 +91,39 @@ final class MusicPlayerUITests: XCTestCase {
 }
 
 extension MusicPlayerUITests {
+    func testBrowserPullRefreshAndLinkActions() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["homeBrowser"].tap()
+        let address = app.textFields["webAddress"]
+        XCTAssertTrue(address.waitForExistence(timeout: 10))
+        address.tap()
+        address.typeText("http://127.0.0.1:8765/interactions")
+        app.buttons["Open website"].tap()
+        let pageLoad = app.webViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Page load ")).firstMatch
+        XCTAssertTrue(pageLoad.waitForExistence(timeout: 30))
+        let previousLoad = pageLoad.label
+        let surface = app.webViews.firstMatch
+        let start = surface.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        start.press(forDuration: 0.1, thenDragTo: surface.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)))
+        let reloaded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            pageLoad.exists && pageLoad.label != previousLoad
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [reloaded], timeout: 30), .completed)
+        let link = app.webViews.links["Example page"]
+        link.press(forDuration: 1)
+        for title in ["Open in new tab", "Open in private tab", "Download link", "Save bookmark", "Copy link", "Share link"] {
+            XCTAssertTrue(app.buttons[title].waitForExistence(timeout: 5), title)
+        }
+        capture(app, name: "Jiza Link Actions")
+        app.buttons["Save bookmark"].tap()
+        link.press(forDuration: 1)
+        app.buttons["Open in new tab"].tap()
+        XCTAssertTrue(app.webViews.staticTexts["Browser fixture"].waitForExistence(timeout: 30))
+        app.buttons["Tabs"].tap()
+        XCTAssertTrue(app.buttons["Close tab"].count >= 2)
+    }
+
     func testBrowserTabsAndDownloadSettings() {
         let app = XCUIApplication()
         app.launch()

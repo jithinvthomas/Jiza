@@ -1,6 +1,7 @@
 ﻿"""Loopback-only fixtures for the iPhone browser integration tests."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from uuid import uuid4
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -17,6 +18,10 @@ class Handler(BaseHTTPRequestHandler):
             body, mime = Path("TestFixtures/without-artwork.mp3").read_bytes(), "audio/mpeg"
         elif route == "/fixture.torrent":
             body, mime = b"d8:announce19:https://example.come", "application/x-bittorrent"
+        elif route == "/interactions":
+            body = ('<html><meta name="viewport" content="width=device-width, initial-scale=1"><title>Browser interactions</title>'
+                    '<body style="font:20px sans-serif;padding:24px"><p>Page load ' + str(uuid4()) + '</p>'
+                    '<p><a href="/page">Example page</a></p><p><a href="/file">Download sample</a></p></body></html>').encode()
         elif route == "/links":
             body = b'<html><title>Download links</title><a id="video" target="_blank" href="/movie.mp4">Video</a><a id="audio" href="/song.mp3">Audio</a><a id="redirect" target="_blank" href="/redirect">Redirect</a><a id="torrent" href="/fixture.torrent">Torrent</a></html>'
         elif route == "/ads/banner.js":

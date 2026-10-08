@@ -110,6 +110,21 @@ extension BrowserModelTests {
 }
 
 extension BrowserModelTests {
+    func testLinkBookmarkUsesTargetAndRefreshHandlesEmptyPage() throws {
+        let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let tab = try XCTUnwrap(browser.selected)
+        let target = URL(string: "https://example.com/saved")!
+        browser.bookmark(target)
+        XCTAssertEqual(browser.bookmarks.first?.url, target)
+        browser.bookmark(URL(string: "javascript:alert(1)")!)
+        XCTAssertEqual(browser.bookmarks.count, 1)
+        let refresh = try XCTUnwrap(tab.web.scrollView.refreshControl)
+        refresh.beginRefreshing()
+        refresh.sendActions(for: .valueChanged)
+        XCTAssertFalse(refresh.isRefreshing)
+        XCTAssertTrue(tab.web.scrollView.alwaysBounceVertical)
+    }
+
     func testMediaResponsesDownloadOnlyForTopLevelNavigation() {
         XCTAssertTrue(BrowserDownloadPolicy.shouldDownload(mime: "video/mp4", disposition: nil, mainFrame: true, enabled: true))
         XCTAssertTrue(BrowserDownloadPolicy.shouldDownload(mime: "audio/mpeg", disposition: nil, mainFrame: true, enabled: true))
