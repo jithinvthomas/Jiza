@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parent
 PROJECT = ROOT.parent
 ASSETS = {
+    **{f"brand-{name}.svg": f"Assets.xcassets/Jiza{title}Brand.imageset/jiza-{name}.svg" for title, name in [("Music", "music"), ("Video", "video"), ("Browser", "browser"), ("Trading", "trading"), ("Downloader", "download")]},
     **{f"lettering-{name}.png": f"Brand/jiza-lettering-{name}-v1.png" for name in ["music", "video", "browser", "download", "trading"]},
     "symbol.png": "Assets.xcassets/JizaSymbol.imageset/jiza-symbol.png",
     "wordmark.png": "Assets.xcassets/JizaWordmark.imageset/wordmark.png",
@@ -43,7 +44,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'self'")
+        policy = "default-src 'none'; img-src data:; style-src 'none'" if mime == "image/svg+xml" else "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'self'"
+        self.send_header("Content-Security-Policy", policy)
         self.end_headers()
         self.wfile.write(data)
 

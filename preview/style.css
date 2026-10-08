@@ -11,4 +11,11 @@
 .lettering-download{width:110px;mask-image:url('/assets/lettering-download.png');mask-size:118px 39px;mask-position:-4px -10px}
 .lettering-trading{width:79px;mask-image:url('/assets/lettering-trading.png');mask-size:83px 28px;mask-position:-2px -4px}
 .topbar>.heading{gap:3px;align-items:center}
-.topbar>.heading>.wordmark+span{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:800;font-style:normal;letter-spacing:-.8px;line-height:1.15}
+.topbar>.heading>.wordmark+span{height:22px}
+.combined-brand{display:block;flex:none;width:120px;height:24px;background:var(--ink);mask-position:left center;mask-size:contain;mask-repeat:no-repeat;mask-mode:alpha}
+.brand-music{mask-image:url('/assets/brand-music.svg')}
+.brand-video{mask-image:url('/assets/brand-video.svg')}
+.brand-browser{mask-image:url('/assets/brand-browser.svg')}
+.brand-trading{mask-image:url('/assets/brand-trading.svg')}
+.brand-download{mask-image:url('/assets/brand-download.svg')}
+.space-card .combined-brand{margin:0 0 5px}
