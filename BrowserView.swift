@@ -257,9 +257,36 @@ struct BrowserDownloadsView: View {
     @State private var sharedFiles: [URL] = []
     var body: some View {
         List {
+            Section("Start a download") {
+                Button { pickingTorrent = true; chooseFolder = true } label: {
+                    Label("Open .torrent file", systemImage: "doc.badge.plus")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }
+                .accessibilityIdentifier("openTorrentFile")
+                TextField("File URL or magnet link", text: $address).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .accessibilityIdentifier("downloadAddress")
+                Button("Start download") {
+                    let input = address.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if input.hasPrefix("magnet:") { torrents.start(input); address = ""; return }
+                    guard let url = URL(string: address.trimmingCharacters(in: .whitespacesAndNewlines)), BrowserModel.isWebURL(url), let tab = browser.selected else { downloads.error = "Enter a complete HTTP or HTTPS file URL."; return }
+                    downloads.start(URLRequest(url: url), web: tab.web, isPrivate: tab.isPrivate); address = ""
+                }
+                .disabled(address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("startLinkDownload")
+                Text("Paste a file or magnet link, or open a .torrent file from Files.").font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Downloads") {
+                if downloads.items.isEmpty { Text("Your downloads will appear here. Add a link or open a .torrent file above to get started.").foregroundStyle(.secondary) }
+                ForEach(downloads.items) { item in
+                    if let url = item.localURL, url.pathExtension.lowercased() == "torrent" {
+                        Button("Start torrent: " + item.name) { torrents.importFile(url) }
+                    }
+                    BrowserDownloadRow(item: item) { exportURL = ExportedFile(url: $0) }
+                        .swipeActions { Button("Forget", role: .destructive) { downloads.remove(item) } }
+                }
+            }
             Section("Torrents on this iPhone") {
-                Button("Open .torrent file") { pickingTorrent = true; chooseFolder = true }
-                    .accessibilityIdentifier("openTorrentFile")
                 Text("Downloads save in Jiza / Downloads / Torrents. Keep Jiza open while downloading; iOS can suspend transfers in the background.").font(.caption).foregroundStyle(.secondary)
                 ForEach(torrents.rows.indices, id: \.self) { index in
                     let row = torrents.rows[index]
@@ -275,7 +302,7 @@ struct BrowserDownloadsView: View {
                 }
                 if let error = torrents.error { Text(error).foregroundStyle(.red) }
             }
-            Section("Add download") {
+            Section("Shared with Jiza") {
                 ForEach(sharedFiles, id: \.self) { file in
                     Button("Shared: " + file.lastPathComponent) {
                         if file.lastPathComponent == "Shared link.txt", let text = try? String(contentsOf: file, encoding: .utf8) { address = text }
@@ -284,30 +311,12 @@ struct BrowserDownloadsView: View {
                     }
                 }
                 Button("Refresh shared files") { sharedFiles = (try? SharedInbox.files()) ?? [] }
-                TextField("File URL or magnet link", text: $address).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                Button("Download URL") {
-                    let input = address.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if input.hasPrefix("magnet:") { torrents.start(input); address = ""; return }
-                    guard let url = URL(string: address.trimmingCharacters(in: .whitespacesAndNewlines)), BrowserModel.isWebURL(url), let tab = browser.selected else { downloads.error = "Enter a complete HTTP or HTTPS file URL."; return }
-                    downloads.start(URLRequest(url: url), web: tab.web, isPrivate: tab.isPrivate); address = ""
-                }
-                Text("Paste a direct file URL or a magnet link. For a downloaded torrent, choose Open .torrent file above.").font(.caption).foregroundStyle(.secondary)
             }
             Section("Save downloads to") {
                 Text(downloads.folderName).font(.subheadline)
                 Button("Choose download folder") { pickingTorrent = false; chooseFolder = true }
                 Button("Use Jiza Downloads folder") { downloads.useDefaultFolder() }
                 Text("Downloads also keep a copy in Jiza. Private downloads are saved files too. Keep Jiza open until downloads finish.").font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Downloads") {
-                if downloads.items.isEmpty { Text("No downloads yet. Use a website's download link or Download this page or file in the browser menu.").foregroundStyle(.secondary) }
-                ForEach(downloads.items) { item in
-                    if let url = item.localURL, url.pathExtension.lowercased() == "torrent" {
-                        Button("Start torrent: " + item.name) { torrents.importFile(url) }
-                    }
-                    BrowserDownloadRow(item: item) { exportURL = ExportedFile(url: $0) }
-                        .swipeActions { Button("Forget", role: .destructive) { downloads.remove(item) } }
-                }
             }
         }.navigationTitle("Downloader").scrollContentBackground(.hidden).background(JizaPalette.background)
             .onAppear { sharedFiles = (try? SharedInbox.files()) ?? [] }

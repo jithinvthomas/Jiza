@@ -9,7 +9,7 @@ struct JizaHomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 20) {
                     HStack(spacing: 16) {
                         Image("JizaSymbol").resizable().scaledToFit()
                             .frame(width: 56, height: 56)
@@ -17,19 +17,19 @@ struct JizaHomeView: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Your space.").font(.system(.largeTitle, design: .rounded, weight: .bold))
-                            Text("Listen, watch, explore.").font(.subheadline).foregroundStyle(.secondary)
+                            Text("Music, videos, browsing and more.").font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 14) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize >= .xxxLarge ? 1 : 2), spacing: 12) {
                         entry("Music", detail: "Songs & playlists", route: "Player", asset: "JizaPlayer")
                         entry("Video", detail: "Films & streams")
-                        entry("Browser", detail: "Web & downloads")
-                        entry("Downloader", detail: "Files & links", asset: "JizaBrowser")
+                        entry("Browser", detail: "Tabs & bookmarks")
+                        entry("Downloader", detail: "Links & torrents", symbol: "arrow.down.circle.fill")
                         entry("Trading", detail: "Your workspace")
                     }
                     .modifier(JizaGlassGroup())
                 }
-                .padding(24)
+                .padding(20)
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
             }
@@ -54,29 +54,40 @@ struct JizaHomeView: View {
         .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light)
     }
 
-    private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil) -> some View {
+    private func entry(_ title: String, detail: String, route: String? = nil, asset: String? = nil, symbol: String? = nil) -> some View {
         NavigationLink(value: route ?? title) {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                Image(asset ?? ("Jiza" + title)).resizable().scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    Group {
+                        if let symbol {
+                            Image(systemName: symbol)
+                                .font(.system(size: 34, weight: .medium))
+                                .foregroundStyle(JizaPalette.accent)
+                                .frame(width: 56, height: 56)
+                                .background(JizaPalette.accent.opacity(0.12))
+                        } else {
+                            Image(asset ?? ("Jiza" + title)).resizable().scaledToFit()
+                                .frame(width: 56, height: 56)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .accessibilityHidden(true)
                     Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityHidden(true)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 5) {
                     Text(title)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(.title3, design: .rounded, weight: .bold))
                         .foregroundStyle(.primary)
                     Text(detail).font(.subheadline).foregroundStyle(.secondary)
                 }
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .modifier(JizaSurface(interactive: true))
         }
         .buttonStyle(JizaPressStyle())
+        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("home" + (route ?? title))
     }
 }
