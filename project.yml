@@ -22,6 +22,7 @@ targets:
       - VideoLibraryView.swift
       - ContentView.swift
       - JizaHomeView.swift
+      - TradingDashboardView.swift
       - SharedInbox.swift
       - TorrentModel.swift
       - JizaDesign.swift
@@ -128,6 +129,7 @@ targets:
       - AudioPlayerModelTests.swift
       - VideoPlayerModelTests.swift
       - BrowserModelTests.swift
+      - TradingDashboardTests.swift
       - TorrentTests.swift
       - AppSecurityTests.swift
       - path: TestFixtures

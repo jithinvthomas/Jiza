@@ -54,22 +54,16 @@ final class MusicPlayerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Open network stream"].waitForExistence(timeout: 3))
     }
 
-    func testHomeChoicesAndTradingValidation() {
+    func testHomeChoicesAndTradingOpensInsideApp() {
         let app = XCUIApplication()
-        app.launchArguments = ["-jizaTradingAddress", ""]
         app.launch()
         XCTAssertTrue(app.buttons["homePlayer"].waitForExistence(timeout: 10))
         capture(app, name: "Jiza White Wordmark Home")
         XCTAssertTrue(app.buttons["homeBrowser"].exists)
         XCTAssertTrue(app.buttons["homeTrading"].exists)
         app.buttons["homeTrading"].tap()
-        let address = app.textFields["webAddress"]
-        XCTAssertTrue(address.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Open Trading"].isEnabled)
-        address.tap()
-        address.typeText("https://localhost:8000")
-        app.buttons["Open Trading"].tap()
-        XCTAssertTrue(app.staticTexts["addressError"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.webViews["tradingDashboardWebView"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Refresh Trading"].exists)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["homeBrowser"].tap()
         XCTAssertTrue(app.textFields["webAddress"].waitForExistence(timeout: 3))
