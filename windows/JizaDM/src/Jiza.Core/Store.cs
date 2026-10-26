@@ -63,7 +63,14 @@ public sealed class Store(string folder)
 
     T? Load<T>(string path) where T : class
     {
-        try { return File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllBytes(path), Options) : null; }
+        try
+        {
+            if (!File.Exists(path)) return null;
+            ReadOnlySpan<byte> json = File.ReadAllBytes(path);
+            // Notepad and PowerShell save UTF-8 with a byte-order mark, which the JSON reader rejects.
+            if (json.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF])) json = json[3..];
+            return JsonSerializer.Deserialize<T>(json, Options);
+        }
         catch (JsonException)
         {
             // Keep the unreadable file for inspection instead of silently overwriting it.

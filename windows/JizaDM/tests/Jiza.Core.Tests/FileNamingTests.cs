@@ -40,6 +40,26 @@ public class FileNamingTests
     }
 }
 
+public class StoreTests
+{
+    [Fact]
+    public void ReadsFilesSavedWithByteOrderMark()
+    {
+        var folder = Directory.CreateTempSubdirectory("jiza-store-").FullName;
+        try
+        {
+            // As Notepad or PowerShell would save a hand-edited file.
+            File.WriteAllText(Path.Combine(folder, "settings.json"), "{\"Connections\": 8}", new System.Text.UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(folder, "downloads.json"), "[]", new System.Text.UTF8Encoding(true));
+            var store = new Store(folder);
+            Assert.Equal(8, store.LoadSettings().Connections);
+            Assert.Empty(store.LoadDownloads());
+            Assert.False(File.Exists(Path.Combine(folder, "downloads.json.corrupt")));
+        }
+        finally { Directory.Delete(folder, recursive: true); }
+    }
+}
+
 public class DownloadPolicyTests
 {
     [Fact]

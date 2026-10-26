@@ -1,7 +1,7 @@
 // Serves release files from the R2 bucket bound as FILES, at /download/<name>.
 // Supports HEAD and Range requests so download managers can resume and use many connections.
 const RELEASES = {
-  "JizaDM.exe": { key: "JizaDM-1.0.0.exe", type: "application/vnd.microsoft.portable-executable" },
+  "JizaDM.exe": { key: "JizaDM-1.0.1.exe", type: "application/vnd.microsoft.portable-executable" },
 };
 
 export async function onRequest({ request, env, params }) {
