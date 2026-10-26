@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jiza Download Manager</title>
+  <style>
+    body { margin: 0; width: 320px; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; color: #EEF2FF;
+           background: radial-gradient(circle at top right, rgba(49,91,235,.35), transparent 60%), #10182C; }
+    header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 8px; }
+    header img { width: 32px; height: 32px; }
+    h1 { font-size: 15px; margin: 0; }
+    .muted { color: #9AA8C7; font-size: 12px; }
+    .card { margin: 8px 12px; padding: 10px 12px; background: #19243D; border: 1px solid #2C3D66; border-radius: 10px; }
+    label { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    button { width: 100%; margin-top: 8px; padding: 8px; border-radius: 8px; border: 1px solid #2C3D66; background: #213052;
+             color: #EEF2FF; font: inherit; cursor: pointer; }
+    button.primary { background: #315BEB; border-color: #315BEB; font-weight: 600; }
+    button:hover { filter: brightness(1.12); }
+    .media { padding: 6px 0; border-top: 1px solid #2C3D66; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .media:first-child { border-top: 0; }
+    .ok { color: #5BD68A; } .bad { color: #FF7A7A; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="">
+    <div><h1>Jiza Download Manager</h1><div id="status" class="muted">Checking connection...</div></div>
+  </header>
+  <div class="card">
+    <label>Take over browser downloads <input type="checkbox" id="capture"></label>
+  </div>
+  <div class="card">
+    <button class="primary" id="page">Download video from this page</button>
+    <div id="mediaTitle" class="muted" style="margin-top:10px">Media found on this tab</div>
+    <div id="media" class="muted">None yet. Play the video for a moment.</div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <button id="show">Open Jiza</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

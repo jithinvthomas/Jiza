@@ -1,0 +1,360 @@
+<title>Jiza Download Manager</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one wide column; the hero is a live segment ribbon, everything after it is quiet reference. */
+:root {
+  --frost: #F3F6FC;      /* page ground, from Jiza's light background */
+  --sheet: #FFFFFF;      /* raised surfaces */
+  --ink: #0E1630;        /* text */
+  --slate: #5B6785;      /* secondary text */
+  --rule: #D8E0F2;       /* hairlines and ribbon track */
+  --cobalt: #315BEB;     /* Jiza brand: bytes already on disk */
+  --filament: #E8960F;   /* the one warm colour: a connection writing right now */
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --data: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --frost: #0F1730; --sheet: #172242; --ink: #EEF2FF; --slate: #9AA8C7; --rule: #26365F;
+    --cobalt: #4C72F0; --filament: #FFB547; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --frost: #0F1730; --sheet: #172242; --ink: #EEF2FF; --slate: #9AA8C7; --rule: #26365F;
+  --cobalt: #4C72F0; --filament: #FFB547; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--frost);
+  color: var(--ink);
+  font: 400 1rem/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 68rem; margin: 0 auto; }
+a { color: var(--cobalt); }
+:focus-visible { outline: 2px solid var(--filament); outline-offset: 3px; border-radius: 3px; }
+
+/* Masthead */
+.mast { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.25rem; }
+.brand { display: flex; align-items: center; gap: .6rem; font: 700 1.05rem/1 var(--display); font-stretch: 112%; letter-spacing: .01em; }
+.mark { width: 28px; height: 28px; border-radius: 7px; background: var(--cobalt); display: grid; place-items: center; }
+.mark svg { width: 16px; height: 16px; }
+.mast nav { display: flex; gap: 1.25rem; font-size: .9rem; }
+.mast nav a { color: var(--slate); text-decoration: none; }
+.mast nav a:hover { color: var(--ink); }
+
+/* Hero */
+/* The hero (headline, lede, live ribbon) fits one laptop screen: sizes follow both width and height. */
+.hero { padding-block: clamp(1.25rem, 4vh, 3rem) clamp(1.25rem, 3vh, 2.5rem); }
+.hero h1 {
+  font: 800 clamp(2rem, min(5.6vw, 8.5vh), 4.6rem)/0.98 var(--display);
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-wrap: balance;
+  max-width: 15ch;
+}
+.hero h1 em { font-style: normal; color: var(--cobalt); }
+.lede { max-width: 58ch; margin: clamp(.75rem, 2.5vh, 1.5rem) 0 0; font-size: clamp(1rem, 2.2vh, 1.15rem); color: var(--slate); }
+
+.ribbon-frame { margin: clamp(1.25rem, 4vh, 2.75rem) 0 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 1.25rem 1.25rem 1rem; }
+.ribbon-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.5rem; font: 500 .85rem/1.4 var(--data); color: var(--slate); font-variant-numeric: tabular-nums; }
+.ribbon-head strong { color: var(--ink); font-weight: 500; }
+#ribbon { display: block; width: 100%; height: clamp(40px, 7vh, 64px); margin-top: .9rem; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; margin-top: .85rem; font-size: .85rem; color: var(--slate); }
+.swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 2px; vertical-align: -1px; margin-right: .4rem; }
+.replay { margin-left: auto; font: 500 .85rem var(--body); color: var(--cobalt); background: none; border: 0; padding: 0; cursor: pointer; }
+
+/* Sections */
+section { padding-block: 3rem; border-top: 1px solid var(--rule); }
+h2 { font: 700 clamp(1.5rem, 3vw, 2.1rem)/1.1 var(--display); font-stretch: 118%; margin: 0 0 1.25rem; text-wrap: balance; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 2.5rem; align-items: start; }
+.cols > * { min-width: 0; }
+p { margin: 0 0 1rem; max-width: 62ch; }
+.muted { color: var(--slate); }
+
+/* Link grammar: what Jiza does with each kind of address */
+.links { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.links td { padding: .7rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.links tr:last-child td { border-bottom: 0; }
+.links code { font: .82rem/1.4 var(--data); color: var(--ink); background: var(--frost); border: 1px solid var(--rule); border-radius: 5px; padding: .15rem .4rem; word-break: break-all; }
+.links td:first-child { width: 46%; padding-right: 1.25rem; }
+.table-scroll { overflow-x: auto; }
+
+/* Measured: a transfer log, not marketing numbers */
+.log { margin: 0; font: .88rem/1.7 var(--data); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.2rem; overflow-x: auto; white-space: pre; font-variant-numeric: tabular-nums; }
+.log .ok { color: var(--cobalt); }
+.log .dim { color: var(--slate); }
+
+/* Install steps: a real sequence, so they are numbered */
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .25rem 1rem; }
+.steps li::before { content: counter(step); grid-row: 1 / span 2; font: 700 1.15rem/1.6 var(--display); font-stretch: 125%; color: var(--cobalt); }
+.steps li > * { grid-column: 2; }
+.steps strong { display: block; }
+.copy-row { display: flex; gap: .5rem; align-items: stretch; margin-top: .4rem; flex-wrap: wrap; }
+.copy-row code { flex: 1 1 18rem; min-width: 0; font: .82rem/1.4 var(--data); background: var(--sheet); border: 1px solid var(--rule); border-radius: 7px; padding: .5rem .65rem; overflow-x: auto; white-space: nowrap; }
+.copy-row button { font: 600 .85rem var(--body); color: #fff; background: var(--cobalt); border: 0; border-radius: 7px; padding: .5rem .9rem; cursor: pointer; }
+
+.limits { font-size: .95rem; color: var(--slate); }
+footer { padding-block: 2rem 3rem; border-top: 1px solid var(--rule); font-size: .85rem; color: var(--slate); }
+
+@media (max-width: 760px) {
+  .cols { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .mast nav { display: none; }
+  .hero { padding-block: 2rem 1.5rem; }
+  .links tr { display: grid; border-bottom: 1px solid var(--rule); padding-block: .5rem; }
+  .links td, .links td:first-child { width: auto; border-bottom: 0; padding: .2rem 0; }
+  /* On phones the test log wraps instead of scrolling sideways. */
+  .log { white-space: pre-wrap; font-size: .8rem; }
+  .ribbon-head { font-size: .78rem; }
+}
+.mast { padding-block: clamp(.75rem, 2vh, 1.25rem); }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 4.2 7.4 2.6v10.8L3 11.8z" fill="#fff" opacity=".92"/><path d="M9 5.2l3.6 1.3v6.2L9 13.4z" fill="#fff" opacity=".78"/></svg></span>
+      Jiza Download Manager
+    </div>
+    <nav aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#links">What it downloads</a>
+      <a href="#install">Install</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>No connection <em>waits</em> for the last megabyte.</h1>
+      <p class="lede">Jiza splits every file into lanes and downloads them over 16 connections at once. When a connection finishes its lane, it takes half of the slowest one, so the end of a download moves as fast as the start.</p>
+
+      <figure class="ribbon-frame">
+        <div class="ribbon-head">
+          <span>ubuntu-24.04-desktop-amd64.iso</span>
+          <span><strong id="got">0 MB</strong> of 5.80 GB · <strong id="lanes">16</strong> lanes · <strong id="rate">0.0 MB/s</strong></span>
+        </div>
+        <canvas id="ribbon" role="img" aria-label="Animated segment ribbon: sixteen connections fill their parts of a file, and finished connections split the slowest remaining part."></canvas>
+        <figcaption class="legend">
+          <span><i class="swatch" style="background:var(--cobalt)"></i>On disk</span>
+          <span><i class="swatch" style="background:var(--filament)"></i>A connection writing now</span>
+          <span><i class="swatch" style="background:var(--rule)"></i>Not fetched yet</span>
+          <span class="muted">Playback is sped up about 10 times.</span>
+          <button class="replay" id="replay" type="button">Replay</button>
+        </figcaption>
+      </figure>
+    </div>
+
+    <section id="how">
+      <div class="cols">
+        <h2>Built from the Jiza app's downloader</h2>
+        <div>
+          <p>The naming rules, the list of file types worth catching, and pause, resume and retry all come from the Jiza iPhone app. The Windows version adds what a desktop download manager needs.</p>
+          <p class="muted">Every lane is remembered on disk. Close Jiza in the middle of a 5 GB file, reopen it tomorrow, and it asks the server only for the bytes it doesn't have. If a server allows fewer connections, Jiza keeps the ones it gets instead of failing.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="links">
+      <div class="cols">
+        <div>
+          <h2>Paste any link</h2>
+          <p class="muted">Jiza looks at the address and the server's answer, then picks the right way to fetch it. Copy a link anywhere and Jiza offers to download it.</p>
+        </div>
+        <div class="table-scroll">
+          <table class="links">
+            <tbody>
+              <tr><td><code>https://cdn.example.com/setup.exe</code></td><td>Files over HTTP or HTTPS, split across up to 32 connections.</td></tr>
+              <tr><td><code>ftp://mirror.example.org/pub/disk.iso</code></td><td>FTP and FTPS, with resume.</td></tr>
+              <tr><td><code>https://stream.example.com/live/index.m3u8</code></td><td>HLS streams: segments fetched in parallel, AES-128 decrypted, joined into one video.</td></tr>
+              <tr><td><code>https://www.youtube.com/watch?v=…</code></td><td>Video pages on more than 1,000 sites, with a quality picker.</td></tr>
+              <tr><td><code>magnet:?xt=urn:btih:…</code></td><td>Torrents and .torrent files, with DHT and peer exchange.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="measured">
+      <div class="cols">
+        <div>
+          <h2>Measured on one PC</h2>
+          <p class="muted">Results from the first test session, on a line that tops out near 20 MB/s. A plain single-connection download on the same line reached 20.7 MB/s, so Jiza matched the line itself.</p>
+        </div>
+        <pre class="log"><span class="dim">file                          size      result</span>
+1GB.zip  (thinkbroadband)     1.00 GB   <span class="ok">done in 56 s · peak 24.9 MB/s</span>
+                                        <span class="dim">16 lanes, split into 35 by the end</span>
+debian-13.7.0 netinst.iso     756 MB    <span class="ok">torrent · SHA-256 matches Debian</span>
+Big Buck Bunny 4K (Blender)   689 MB    <span class="ok">3840×2160 AV1 + Opus, 10:34</span>
+pause → quit → reopen → resume          <span class="ok">no byte fetched twice</span></pre>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="cols">
+        <h2>Install</h2>
+        <ol class="steps">
+          <li>
+            <strong>Run JizaDM.exe</strong>
+            <span class="muted">One 73 MB file with nothing else to install. On first start it connects itself to Chrome, Edge and Brave for your Windows account.</span>
+          </li>
+          <li>
+            <strong>Open chrome://extensions and turn on Developer mode</strong>
+            <span class="muted">In Edge, the page is edge://extensions.</span>
+          </li>
+          <li>
+            <strong>Click Load unpacked and choose this folder</strong>
+            <div class="copy-row">
+              <code id="ext-path">%AppData%\JizaDM\extension</code>
+              <button type="button" id="copy-path">Copy path</button>
+            </div>
+          </li>
+          <li>
+            <strong>Download something</strong>
+            <span class="muted">Click any file link. Jiza opens with the name, size and folder already filled in. Over a video, use the Download with Jiza button.</span>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <p class="limits">Streams protected by DRM, such as Netflix, Disney+ and Spotify, can't be downloaded. Only download files you have the right to keep.</p>
+    </section>
+  </main>
+
+  <footer>Jiza Download Manager 1.0 for Windows 10 and 11. Light, dark or Follow Windows under Options.</footer>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("ribbon");
+  const ctx = canvas.getContext("2d");
+  const got = document.getElementById("got");
+  const lanesOut = document.getElementById("lanes");
+  const rateOut = document.getElementById("rate");
+  const TOTAL = 5.8 * 1024;    // MB, the size shown in the header
+  const MIN_SPLIT = 48;        // MB: lanes with less left than this aren't split again
+  const SPEEDUP = 10;          // playback speed; the rate shown stays real
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let segments, workers, last, finishedAt;
+
+  const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  function reset() {
+    const n = 16, size = TOTAL / n;
+    segments = Array.from({ length: n }, (_, i) => ({ start: i * size, end: (i + 1) * size, done: 0, owner: i }));
+    // Each connection gets its own pace, as real routes do; together about 24 MB/s.
+    workers = Array.from({ length: n }, (_, i) => ({ id: i, speed: 0.8 + Math.random() * 1.4, seg: segments[i] }));
+    last = performance.now();
+    finishedAt = 0;
+  }
+
+  function steal(worker) {
+    let victim = null, most = 0;
+    for (const s of segments) {
+      const left = s.end - (s.start + s.done);
+      if (s.owner !== null && left >= MIN_SPLIT && left > most) { victim = s; most = left; }
+    }
+    if (!victim) { worker.seg = null; return; }
+    const mid = victim.start + victim.done + most / 2;
+    const upper = { start: mid, end: victim.end, done: 0, owner: worker.id };
+    victim.end = mid;
+    segments.splice(segments.indexOf(victim) + 1, 0, upper);
+    worker.seg = upper;
+  }
+
+  function step(seconds) {
+    let rate = 0;
+    for (const w of workers) {
+      if (!w.seg) continue;
+      const s = w.seg;
+      const pace = w.speed * (0.85 + Math.random() * 0.3);
+      s.done = Math.min(s.end - s.start, s.done + pace * seconds);
+      rate += pace;
+      if (s.start + s.done >= s.end) { s.owner = null; steal(w); }
+    }
+    return rate;
+  }
+
+  function draw() {
+    const dpr = devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const track = token("--rule"), disk = token("--cobalt"), head = token("--filament"), sheet = token("--sheet");
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(0, 0, w, h, 8); ctx.clip();
+    ctx.fillStyle = track; ctx.fillRect(0, 0, w, h);
+    for (const s of segments) {
+      const x = (s.start / TOTAL) * w, fill = (s.done / TOTAL) * w;
+      ctx.fillStyle = disk; ctx.fillRect(x, 0, fill, h);
+      if (s.start > 0) { ctx.fillStyle = sheet; ctx.fillRect(x - 0.5, 0, 1, h); }
+      if (s.owner !== null && s.start + s.done < s.end) {
+        const edge = x + fill;
+        const glow = ctx.createLinearGradient(edge - 14, 0, edge, 0);
+        glow.addColorStop(0, "rgba(0,0,0,0)"); glow.addColorStop(1, head);
+        ctx.globalAlpha = 0.45; ctx.fillStyle = glow; ctx.fillRect(edge - 14, 0, 14, h);
+        ctx.globalAlpha = 1; ctx.fillStyle = head; ctx.fillRect(edge - 1.5, 0, 3, h);
+      }
+    }
+    ctx.restore();
+  }
+
+  function report(rate) {
+    const done = segments.reduce((a, s) => a + s.done, 0);
+    got.textContent = done >= 1024 ? (done / 1024).toFixed(2) + " GB" : Math.round(done) + " MB";
+    lanesOut.textContent = segments.length;
+    rateOut.textContent = rate.toFixed(1) + " MB/s";
+    return done;
+  }
+
+  function frame(now) {
+    const seconds = Math.min(0.1, (now - last) / 1000) * SPEEDUP;
+    last = now;
+    const done = report(step(seconds));
+    draw();
+    if (done >= TOTAL - 0.01) {
+      rateOut.textContent = "complete";
+      finishedAt ||= now;
+      if (now - finishedAt > 2400) reset();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Reduced motion: one still frame partway through, with lanes already split.
+  function still() {
+    reset();
+    let rate = 0;
+    for (let i = 0; i < 1900; i++) rate = step(1);
+    report(rate);
+    draw();
+  }
+
+  document.getElementById("replay").addEventListener("click", () => (reduced ? still() : reset()));
+  addEventListener("resize", draw);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  if (reduced) still(); else { reset(); draw(); requestAnimationFrame(frame); }
+
+  const copy = document.getElementById("copy-path");
+  copy.addEventListener("click", async () => {
+    const code = document.getElementById("ext-path");
+    try { await navigator.clipboard.writeText(code.textContent); copy.textContent = "Copied"; }
+    catch {
+      const range = document.createRange(); range.selectNodeContents(code);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      copy.textContent = "Press Ctrl+C";
+    }
+    setTimeout(() => (copy.textContent = "Copy path"), 2000);
+  });
+})();
+</script>

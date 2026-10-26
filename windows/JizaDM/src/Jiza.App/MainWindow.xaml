@@ -1,0 +1,183 @@
+﻿<Window x:Class="Jiza.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Jiza.App"
+        Title="Jiza Download Manager" Width="1280" Height="720" MinWidth="760" MinHeight="420"
+        Icon="Assets/jiza.png" Background="{DynamicResource JizaBackground}"
+        AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver" WindowStartupLocation="CenterScreen">
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{x:Static local:MainWindow.AddCommand}" />
+        <KeyBinding Key="V" Modifiers="Ctrl" Command="{x:Static local:MainWindow.PasteCommand}" />
+        <KeyBinding Key="Delete" Command="{x:Static local:MainWindow.DeleteCommand}" />
+    </Window.InputBindings>
+    <Grid Background="{DynamicResource JizaBackdrop}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Padding="12,8" BorderBrush="{DynamicResource JizaBorder}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="4,0,18,0" VerticalAlignment="Center">
+                    <Image Source="Assets/jiza.png" Width="34" Height="34" />
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Jiza" FontSize="19" FontWeight="Bold" FontFamily="{StaticResource DisplayFont}" Foreground="{DynamicResource JizaText}" />
+                        <TextBlock Text="Download Manager" Style="{StaticResource Caption}" />
+                    </StackPanel>
+                </StackPanel>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnAdd" AutomationProperties.Name="Add URL" ToolTip="Add a download (Ctrl+N)">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE710;" Foreground="{DynamicResource JizaAccent}" /><TextBlock Text="Add URL" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnResume" AutomationProperties.Name="Resume" ToolTip="Start or resume the selected downloads">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE768;" /><TextBlock Text="Resume" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnPause" AutomationProperties.Name="Pause" ToolTip="Pause the selected downloads">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE769;" /><TextBlock Text="Pause" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnPauseAll" AutomationProperties.Name="Stop all" ToolTip="Pause every download">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE71A;" /><TextBlock Text="Stop all" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnDelete" AutomationProperties.Name="Delete" ToolTip="Remove the selected downloads from the list (Delete)">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;" /><TextBlock Text="Delete" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnClearFinished" AutomationProperties.Name="Clear done" ToolTip="Remove finished downloads from the list (files are kept)">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE73E;" /><TextBlock Text="Clear done" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Rectangle DockPanel.Dock="Left" Width="1" Margin="8,6" Fill="{DynamicResource JizaBorder}" />
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnScheduler" AutomationProperties.Name="Scheduler" ToolTip="Schedule the queue">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE823;" /><TextBlock Text="Scheduler" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Left" Style="{StaticResource ToolButton}" Click="OnOptions" AutomationProperties.Name="Options" ToolTip="Options">
+                    <StackPanel><TextBlock Style="{StaticResource Glyph}" Text="&#xE713;" /><TextBlock Text="Options" FontSize="12" Margin="0,4,0,0" /></StackPanel>
+                </Button>
+                <TextBox x:Name="Search" AutomationProperties.Name="Search downloads" DockPanel.Dock="Right" Width="220" VerticalAlignment="Center" TextChanged="OnSearchChanged"
+                         ToolTip="Search downloads by name or address" />
+                <TextBlock DockPanel.Dock="Right" Text="&#xE721;" FontFamily="{StaticResource Icons}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource JizaMuted}" />
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="210" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Category sidebar -->
+            <ListBox x:Name="Sidebar" Grid.Column="0" Margin="10,10,6,10" Background="Transparent" BorderThickness="0"
+                     SelectionChanged="OnSidebarChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="Padding" Value="10,5" />
+                        <Setter Property="MinHeight" Value="34" />
+                        <Setter Property="Margin" Value="0,1" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="local:SidebarEntry">
+                        <Grid Margin="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource Icons}" FontSize="15" VerticalAlignment="Center" Foreground="{DynamicResource JizaAccent}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Count}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0,2,0" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Download list -->
+            <Border Grid.Column="1" Margin="4,10,10,10" Style="{StaticResource Card}" Padding="0">
+                <Grid>
+                    <ListView x:Name="List" Background="Transparent" BorderThickness="0" SelectionMode="Extended"
+                              MouseDoubleClick="OnListDoubleClick" VirtualizingPanel.IsVirtualizing="True">
+                        <ListView.ContextMenu>
+                            <ContextMenu Opened="OnContextOpened">
+                                <MenuItem x:Name="MenuOpen" Header="Open" Click="OnOpenFile" />
+                                <MenuItem x:Name="MenuFolder" Header="Open folder" Click="OnOpenFolder" />
+                                <Separator />
+                                <MenuItem Header="Resume" Click="OnResume" />
+                                <MenuItem Header="Pause" Click="OnPause" />
+                                <MenuItem Header="Restart from beginning" Click="OnRestart" />
+                                <MenuItem Header="Details..." Click="OnDetails" />
+                                <Separator />
+                                <MenuItem x:Name="MenuSchedule" Header="Add to scheduler queue" Click="OnToggleSchedule" />
+                                <MenuItem Header="Copy address" Click="OnCopyUrl" />
+                                <Separator />
+                                <MenuItem Header="Remove from list" Click="OnDelete" />
+                                <MenuItem Header="Remove and delete file" Click="OnDeleteWithFile" />
+                            </ContextMenu>
+                        </ListView.ContextMenu>
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn x:Name="NameColumn" Header="File name" Width="330">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Category, Converter={StaticResource CategoryGlyph}}" FontFamily="{StaticResource Icons}"
+                                                           Foreground="{Binding State, Converter={StaticResource StateBrush}}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Url}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Size" Width="90">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding TotalBytes, Converter={StaticResource Bytes}}" FontFamily="{StaticResource DataFont}" FontSize="12.5" /></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Progress" Width="160">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="140">
+                                                <local:SegmentBar Item="{Binding}" Height="7" VerticalAlignment="Center" Margin="0,0,50,0" />
+                                                <TextBlock Text="{Binding Fraction, Converter={StaticResource Percent}}" HorizontalAlignment="Right" Style="{StaticResource Caption}" FontFamily="{StaticResource DataFont}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Speed" Width="100">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding BytesPerSecond, Converter={StaticResource Speed}}" FontFamily="{StaticResource DataFont}" FontSize="12.5" Foreground="{DynamicResource JizaAccent}" /></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Time left" Width="80">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Eta, Converter={StaticResource Eta}}" FontFamily="{StaticResource DataFont}" FontSize="12.5" /></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Status" Width="210">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Status}" Foreground="{Binding State, Converter={StaticResource StateBrush}}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Added" Width="120" DisplayMemberBinding="{Binding AddedAt, StringFormat='{}{0:d MMM, HH:mm}'}" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+                        <Image Source="Assets/jiza.png" Width="64" Opacity="0.85" />
+                        <TextBlock Text="Nothing here yet" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,14,0,4" />
+                        <TextBlock Text="Add a URL, paste a link with Ctrl+V, drop a link or .torrent here, or download from your browser." Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="2" Padding="14,6" BorderBrush="{DynamicResource JizaBorder}" BorderThickness="0,1,0,0" Background="{DynamicResource JizaSurface}">
+            <DockPanel>
+                <TextBlock x:Name="StatusSpeed" DockPanel.Dock="Left" Foreground="{DynamicResource JizaAccent}" FontWeight="SemiBold" FontFamily="{StaticResource DataFont}" />
+                <TextBlock x:Name="StatusActive" DockPanel.Dock="Left" Margin="18,0,0,0" Style="{StaticResource Caption}" />
+                <TextBlock x:Name="StatusFlags" DockPanel.Dock="Right" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

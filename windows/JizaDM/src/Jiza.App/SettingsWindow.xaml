@@ -1,0 +1,113 @@
+<Window x:Class="Jiza.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Options" Width="640" Height="560" ResizeMode="NoResize" Icon="Assets/jiza.png"
+        Background="{DynamicResource JizaBackground}" WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource JizaBackdrop}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TabControl Margin="16,16,16,0" Background="Transparent">
+            <TabItem Header="General">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Download folder" Style="{StaticResource Caption}" Margin="0,0,0,6" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse..." Margin="8,0,0,0" Click="OnBrowse" />
+                        <TextBox x:Name="FolderBox" />
+                    </DockPanel>
+                    <TextBlock Text="Theme" Style="{StaticResource Caption}" Margin="0,12,0,6" />
+                    <ComboBox x:Name="ThemeBox" Width="220" HorizontalAlignment="Left" />
+                    <CheckBox x:Name="CategoryFolders" Content="Save into category subfolders (Video, Music, Programs...)" Margin="0,12,0,0" />
+                    <CheckBox x:Name="ClipboardBox" Content="Watch the clipboard and offer to download copied links" Margin="0,8,0,0" />
+                    <CheckBox x:Name="NoAsk" Content="Start browser downloads without showing the Add dialog" Margin="0,8,0,0" />
+                    <CheckBox x:Name="CompleteNotice" Content="Notify me when a download finishes" Margin="0,8,0,0" />
+                    <CheckBox x:Name="Startup" Content="Start Jiza with Windows (in the tray)" Margin="0,8,0,0" />
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Speed">
+                <StackPanel Margin="12">
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,6">
+                        <Run Text="Connections per download:" /> <Run x:Name="ConnectionsText" Foreground="{DynamicResource JizaAccent}" />
+                    </TextBlock>
+                    <Slider x:Name="ConnectionsSlider" Minimum="1" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="OnConnectionsChanged" />
+                    <TextBlock Text="More connections are faster on most servers. 16 is a good default; some servers limit how many they allow." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,16,0,6">
+                        <Run Text="Downloads at the same time:" /> <Run x:Name="ConcurrentText" Foreground="{DynamicResource JizaAccent}" />
+                    </TextBlock>
+                    <Slider x:Name="ConcurrentSlider" Minimum="1" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="OnConcurrentChanged" />
+                    <TextBlock Text="Overall speed limit (KB/s, 0 = unlimited)" Style="{StaticResource Caption}" Margin="0,16,0,6" />
+                    <TextBox x:Name="LimitBox" />
+                    <TextBlock Text="Proxy (for example http://127.0.0.1:8080; empty uses the Windows proxy)" Style="{StaticResource Caption}" Margin="0,16,0,6" />
+                    <TextBox x:Name="ProxyBox" />
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Browser">
+                <StackPanel Margin="12">
+                    <TextBlock x:Name="BrowserStatus" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <CheckBox x:Name="Capture" Content="Take over downloads from Chrome, Edge and Brave" Margin="0,12,0,0" />
+                    <TextBlock Text="Add the Jiza extension to your browser (one time):" Style="{StaticResource Caption}" Margin="0,16,0,6" />
+                    <TextBlock TextWrapping="Wrap" LineHeight="22">
+                        1. Open <Run FontWeight="SemiBold" Text="chrome://extensions" /> (or edge://extensions).<LineBreak />
+                        2. Turn on <Run FontWeight="SemiBold" Text="Developer mode" />.<LineBreak />
+                        3. Click <Run FontWeight="SemiBold" Text="Load unpacked" /> and choose the folder below.
+                    </TextBlock>
+                    <TextBox x:Name="ExtensionPath" IsReadOnly="True" Margin="0,10,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="Open extension folder" Click="OnOpenExtension" Margin="0,0,8,0" />
+                        <Button Content="Copy path" Click="OnCopyExtension" Margin="0,0,8,0" />
+                        <Button Content="Repair connection" Click="OnRepair" />
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Video &amp; tools">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Video sites (YouTube, Vimeo, X, TikTok and 1000+ more) use yt-dlp. High qualities need ffmpeg to join video and audio." Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                    <DockPanel Margin="0,16,0,0">
+                        <Button x:Name="YtDlpButton" DockPanel.Dock="Right" Content="Install" MinWidth="110" Click="OnInstallYtDlp" />
+                        <StackPanel>
+                            <TextBlock Text="yt-dlp" FontWeight="SemiBold" />
+                            <TextBlock x:Name="YtDlpStatus" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
+                        <Button x:Name="FfmpegButton" DockPanel.Dock="Right" Content="Install" MinWidth="110" Click="OnInstallFfmpeg" />
+                        <StackPanel>
+                            <TextBlock Text="ffmpeg" FontWeight="SemiBold" />
+                            <TextBlock x:Name="FfmpegStatus" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DockPanel>
+                    <ProgressBar x:Name="ToolProgress" Height="4" Maximum="1" Margin="0,14,0,0" Visibility="Collapsed" />
+                    <TextBlock x:Name="ToolError" Foreground="{DynamicResource JizaDanger}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    <TextBlock Text="DRM-protected services (Netflix, Disney+, Spotify and similar) can't be downloaded." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Torrents">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Keep seeding after a torrent finishes until this upload ratio (0 = stop when complete)" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <TextBox x:Name="SeedBox" Width="120" HorizontalAlignment="Left" />
+                    <TextBlock Text="Torrents use DHT, peer exchange and UPnP port forwarding. Only download content you have the right to share." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="About">
+                <StackPanel Margin="12">
+                    <Image Source="Assets/jiza.png" Width="72" HorizontalAlignment="Left" />
+                    <TextBlock Text="Jiza Download Manager" FontSize="18" FontWeight="SemiBold" Margin="0,12,0,0" />
+                    <TextBlock x:Name="VersionText" Style="{StaticResource Caption}" />
+                    <TextBlock Text="Built from the Jiza app's downloader, with multi-connection acceleration, resume, queue, scheduler, browser capture, streams, video sites and torrents." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                    <TextBlock Text="Free to use under the Jiza freeware license. Copyright © 2026 Jiza." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="View license" Margin="0,0,8,0" Click="OnViewLicense" />
+                        <Button Content="Third-party notices" Click="OnViewNotices" />
+                    </StackPanel>
+                    <TextBlock Text="Data folder" Style="{StaticResource Caption}" Margin="0,16,0,6" />
+                    <TextBox x:Name="DataPath" IsReadOnly="True" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16">
+            <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="0,0,8,0" />
+            <Button Content="Save" IsDefault="True" MinWidth="90" Background="{DynamicResource JizaCobalt}" Foreground="White" Click="OnSave" />
+        </StackPanel>
+    </Grid>
+</Window>

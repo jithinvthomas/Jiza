@@ -1,0 +1,78 @@
+<Window x:Class="Jiza.App.DetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Jiza.App"
+        Title="Download" Width="660" Height="600" MinWidth="520" MinHeight="480" Icon="Assets/jiza.png"
+        Background="{DynamicResource JizaBackground}" WindowStartupLocation="CenterScreen">
+    <Grid Background="{DynamicResource JizaBackdrop}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="20,18,20,0">
+            <TextBlock Text="{Binding FileName}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Url}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" ToolTip="{Binding Url}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="20,14,20,0">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Status" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Status}" Foreground="{Binding State, Converter={StaticResource StateBrush}}" TextWrapping="Wrap" Margin="0,3" />
+                    <TextBlock Grid.Row="1" Text="File size" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TotalBytes, Converter={StaticResource Bytes}}" Margin="0,3" />
+                    <TextBlock Grid.Row="2" Text="Downloaded" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3">
+                        <Run Text="{Binding DownloadedBytes, Converter={StaticResource Bytes}, Mode=OneWay}" /> <Run Text="(" /><Run Text="{Binding Fraction, Converter={StaticResource Percent}, Mode=OneWay}" /><Run Text=")" />
+                    </TextBlock>
+                    <TextBlock Grid.Row="3" Text="Transfer rate" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding BytesPerSecond, Converter={StaticResource Speed}}" Foreground="{DynamicResource JizaAccent}" FontWeight="SemiBold" Margin="0,3" />
+                    <TextBlock Grid.Row="4" Text="Time left" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Eta, Converter={StaticResource Eta}}" Margin="0,3" />
+                    <TextBlock Grid.Row="5" Text="Connections" Style="{StaticResource Caption}" Margin="0,3" />
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,3">
+                        <Run Text="{Binding ActiveConnections, Mode=OneWay}" /> <Run x:Name="ResumeRun" Foreground="{DynamicResource JizaMuted}" />
+                    </TextBlock>
+                </Grid>
+                <local:SegmentBar x:Name="Segments" Height="22" Margin="0,16,0,0" ToolTip="Each lane is one connection's part of the file. The amber edge is where it is writing right now." />
+            </StackPanel>
+        </Border>
+
+        <ListView x:Name="SegmentList" Grid.Row="2" Margin="20,12,20,0" Background="Transparent" BorderThickness="0">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding Index}" />
+                    <GridViewColumn Header="Range" Width="230" DisplayMemberBinding="{Binding Range}" />
+                    <GridViewColumn Header="Downloaded" Width="110" DisplayMemberBinding="{Binding Done}" />
+                    <GridViewColumn Header="State" Width="120" DisplayMemberBinding="{Binding State}" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- Two rows so the buttons never clip at the window's minimum width. -->
+        <StackPanel Grid.Row="3" Margin="20,12,20,18">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="LimitCheck" Content="Limit this download to" VerticalAlignment="Center" Checked="OnLimitChanged" Unchecked="OnLimitChanged" />
+                <TextBox x:Name="LimitBox" Width="80" Margin="8,0,6,0" Text="1024" VerticalAlignment="Center" LostFocus="OnLimitChanged" />
+                <TextBlock Text="KB/s" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button x:Name="ToggleButton" Content="Pause" MinWidth="96" Margin="8,0,0,0" Click="OnToggle" />
+                <Button x:Name="CancelButton" Content="Remove" MinWidth="96" Margin="8,0,0,0" Click="OnRemove" />
+                <Button x:Name="OpenButton" Content="Open" MinWidth="96" Margin="8,0,0,0" Click="OnOpen" />
+                <Button x:Name="FolderButton" Content="Open folder" MinWidth="110" Margin="8,0,0,0" Click="OnFolder" />
+                <Button Content="Close" MinWidth="96" Margin="8,0,0,0" IsCancel="True" Click="OnClose" />
+            </WrapPanel>
+        </StackPanel>
+    </Grid>
+</Window>

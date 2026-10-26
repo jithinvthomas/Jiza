@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jiza Download Manager</title>
+<meta name="description" content="Free download manager for Windows. Splits every file across 16 connections, resumes after restarts, and takes over downloads from Chrome, Edge and Brave.">
+<meta property="og:title" content="Jiza Download Manager">
+<meta property="og:description" content="Free download manager for Windows. 16 connections per file, resume anywhere, video sites and torrents.">
+<meta property="og:image" content="https://jiza.app/assets/og.png">
+<meta property="og:url" content="https://jiza.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#315BEB">
+<link rel="icon" href="/assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one wide column. The hero pairs the download with a live segment ribbon; sections below are reference. */
+:root {
+  --frost: #F3F6FC; --sheet: #FFFFFF; --ink: #0E1630; --slate: #5B6785; --rule: #D8E0F2;
+  --cobalt: #315BEB; --cobalt-ink: #FFFFFF; --filament: #E8960F; --tint: #E7EDFC;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --data: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --frost: #0F1730; --sheet: #172242; --ink: #EEF2FF; --slate: #9AA8C7; --rule: #26365F;
+          --cobalt: #5A7EF2; --filament: #FFB547; --tint: #1C2A52; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--frost); color: var(--ink); font: 400 1rem/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 70rem; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+a { color: var(--cobalt); }
+img { max-width: 100%; height: auto; display: block; }
+:focus-visible { outline: 2px solid var(--filament); outline-offset: 3px; border-radius: 4px; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--sheet); padding: .5rem .8rem; border-radius: 6px; }
+.skip:focus { left: 12px; z-index: 20; }
+
+/* Header */
+header.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--frost) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
+.bar { display: flex; align-items: center; gap: 1.5rem; padding-block: .8rem; }
+.brand { display: flex; align-items: center; gap: .6rem; color: var(--ink); text-decoration: none; font: 700 1.05rem/1 var(--display); font-stretch: 112%; }
+.brand img { width: 30px; height: 30px; border-radius: 7px; }
+.bar nav { display: flex; gap: 1.4rem; margin-left: auto; font-size: .92rem; }
+.bar nav a { color: var(--slate); text-decoration: none; }
+.bar nav a:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; gap: .55rem; font: 600 .95rem/1 var(--body); text-decoration: none; border-radius: 9px; padding: .8rem 1.15rem; border: 1px solid transparent; }
+.btn-primary { background: var(--cobalt); color: var(--cobalt-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-quiet { color: var(--ink); border-color: var(--rule); background: var(--sheet); }
+.btn-small { padding: .55rem .85rem; font-size: .88rem; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+/* Hero */
+.hero { padding-block: clamp(2rem, 6vh, 4.5rem) clamp(1.5rem, 4vh, 3rem); }
+.eyebrow { font: 500 .8rem/1 var(--data); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
+.hero h1 { font: 800 clamp(2.2rem, min(5.8vw, 9vh), 4.8rem)/0.98 var(--display); font-stretch: 125%; letter-spacing: -0.02em; margin: .8rem 0 0; max-width: 15ch; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--cobalt); }
+.lede { max-width: 56ch; margin: 1.2rem 0 0; font-size: clamp(1.02rem, 2.2vh, 1.2rem); color: var(--slate); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1rem; margin-top: 1.8rem; }
+.meta { font: 400 .82rem/1.5 var(--data); color: var(--slate); }
+
+.ribbon-frame { margin: clamp(1.5rem, 5vh, 3rem) 0 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 1.1rem 1.25rem 1rem; }
+.ribbon-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4rem 1.5rem; font: 500 .84rem/1.4 var(--data); color: var(--slate); font-variant-numeric: tabular-nums; }
+.ribbon-head strong { color: var(--ink); font-weight: 500; }
+#ribbon { display: block; width: 100%; height: clamp(40px, 7vh, 60px); margin-top: .85rem; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.4rem; margin-top: .8rem; font-size: .84rem; color: var(--slate); }
+.swatch { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; vertical-align: -1px; margin-right: .4rem; }
+
+/* Sections */
+section { padding-block: clamp(3rem, 8vh, 5rem); border-top: 1px solid var(--rule); }
+h2 { font: 700 clamp(1.6rem, 3.2vw, 2.4rem)/1.08 var(--display); font-stretch: 118%; margin: 0 0 .8rem; text-wrap: balance; max-width: 22ch; }
+h3 { font: 600 1.05rem/1.3 var(--body); margin: 0 0 .35rem; }
+p { margin: 0 0 1rem; max-width: 64ch; }
+.muted { color: var(--slate); }
+.head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 3rem; align-items: end; margin-bottom: 2rem; }
+.head p { margin: 0; }
+
+/* Screenshot */
+.window { border-radius: 12px; overflow: hidden; border: 1px solid var(--rule); background: var(--sheet); box-shadow: 0 24px 60px -28px rgba(14, 22, 48, .35); }
+.shots { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.caption { font-size: .88rem; color: var(--slate); margin-top: .6rem; }
+
+/* Features */
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem 2.5rem; }
+.feature p { margin: 0; color: var(--slate); font-size: .96rem; }
+.tag { display: inline-block; font: 500 .74rem/1 var(--data); letter-spacing: .04em; color: var(--cobalt); background: var(--tint); border-radius: 5px; padding: .3rem .45rem; margin-bottom: .7rem; }
+
+/* Links table */
+.links { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.links td { padding: .75rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.links tr:last-child td { border-bottom: 0; }
+.links td:first-child { width: 44%; padding-right: 1.5rem; }
+.links code { font: .82rem/1.4 var(--data); background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: .15rem .4rem; word-break: break-all; }
+
+/* Measured log */
+.log { margin: 0; font: .88rem/1.75 var(--data); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 1.1rem 1.25rem; overflow-x: auto; white-space: pre; font-variant-numeric: tabular-nums; }
+.log .ok { color: var(--cobalt); } .log .dim { color: var(--slate); }
+
+/* Install steps: a real sequence */
+.steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2.5rem; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: .2rem .9rem; }
+.steps li::before { content: counter(step); grid-row: 1 / span 3; font: 700 1.3rem/1.3 var(--display); font-stretch: 125%; color: var(--cobalt); }
+.steps li > * { grid-column: 2; }
+.steps p { margin: 0; color: var(--slate); font-size: .95rem; }
+.copy-row { display: flex; gap: .5rem; margin-top: .5rem; flex-wrap: wrap; }
+.copy-row code { flex: 1 1 14rem; min-width: 0; font: .82rem/1.4 var(--data); background: var(--sheet); border: 1px solid var(--rule); border-radius: 7px; padding: .5rem .65rem; overflow-x: auto; white-space: nowrap; }
+.copy-row button { font: 600 .85rem var(--body); color: var(--cobalt-ink); background: var(--cobalt); border: 0; border-radius: 7px; padding: .5rem .85rem; cursor: pointer; }
+.note { margin-top: 2rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.2rem; font-size: .94rem; }
+.note strong { color: var(--ink); }
+
+/* FAQ */
+.faq { display: grid; gap: .6rem; max-width: 52rem; }
+details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: .9rem 1.1rem; }
+summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 500 1.2rem/1 var(--data); color: var(--slate); }
+details[open] summary::after { content: "−"; }
+details p { margin: .7rem 0 0; color: var(--slate); }
+
+/* Download band */
+.final .box { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: clamp(1.5rem, 4vw, 2.5rem); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem 2rem; align-items: center; }
+.hash { font: .76rem/1.5 var(--data); color: var(--slate); word-break: break-all; margin-top: .6rem; }
+
+footer { border-top: 1px solid var(--rule); padding-block: 2rem 3rem; font-size: .88rem; color: var(--slate); }
+footer .row { display: flex; flex-wrap: wrap; gap: .6rem 1.5rem; justify-content: space-between; }
+footer nav { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; }
+footer a { color: var(--slate); }
+
+@media (max-width: 900px) {
+  .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shots { grid-template-columns: minmax(0, 1fr); }
+  .head { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .bar nav { display: none; }
+  .bar .btn { margin-left: auto; }
+  .features, .steps { grid-template-columns: minmax(0, 1fr); }
+  .final .box { grid-template-columns: minmax(0, 1fr); }
+  .links tr { display: grid; border-bottom: 1px solid var(--rule); padding-block: .5rem; }
+  .links td, .links td:first-child { width: auto; border: 0; padding: .2rem 0; }
+  .log { white-space: pre-wrap; font-size: .8rem; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="/"><img src="/assets/favicon.png" alt="" width="30" height="30">Jiza</a>
+    <nav aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-primary btn-small" href="/download/JizaDM.exe">Download</a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap hero">
+    <div class="eyebrow">Free download manager for Windows</div>
+    <h1>No connection <em>waits</em> for the last megabyte.</h1>
+    <p class="lede">Jiza splits every file into lanes and downloads them over 16 connections at once. When a connection finishes its lane, it takes half of the slowest one, so the end of a download moves as fast as the start.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="/download/JizaDM.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v3h16v-3"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn btn-quiet" href="#install">How to install</a>
+      <span class="meta">Version 1.0.0 · 73.3 MB · Windows 10 and 11, 64-bit · Free</span>
+    </div>
+
+    <figure class="ribbon-frame">
+      <div class="ribbon-head">
+        <span>ubuntu-24.04-desktop-amd64.iso</span>
+        <span><strong id="got">0 MB</strong> of 5.80 GB · <strong id="lanes">16</strong> lanes · <strong id="rate">0.0 MB/s</strong></span>
+      </div>
+      <canvas id="ribbon" role="img" aria-label="Animated segment ribbon: sixteen connections fill their parts of a file, and finished connections split the slowest remaining part."></canvas>
+      <figcaption class="legend">
+        <span><i class="swatch" style="background:var(--cobalt)"></i>On disk</span>
+        <span><i class="swatch" style="background:var(--filament)"></i>A connection writing now</span>
+        <span><i class="swatch" style="background:var(--rule)"></i>Not fetched yet</span>
+        <span>Simulation, played about 10 times faster than real time.</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="shots">
+        <figure style="margin:0">
+          <div class="window"><img src="/assets/app-main.webp" width="1400" height="788" alt="Jiza's main window: a toolbar, categories on the left and a list of downloads with sizes, progress ribbons and status." loading="lazy"></div>
+          <figcaption class="caption">Every download in one list, sorted into categories. Each progress bar is a small map of the file.</figcaption>
+        </figure>
+        <figure style="margin:0">
+          <div class="window"><img src="/assets/app-details.webp" width="759" height="642" alt="A download's details: 200 MB file at 40 percent, 16.4 MB/s, 16 connections, with a ribbon of 16 lanes." loading="lazy"></div>
+          <figcaption class="caption">The details window shows each connection's lane and speed.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="head">
+        <h2>Everything a download manager should do</h2>
+        <p class="muted">Built on the downloader from the Jiza iPhone app, then extended for the desktop.</p>
+      </div>
+      <div class="features">
+        <div class="feature"><span class="tag">16 connections</span><h3>Faster big files</h3><p>Each file is split across up to 32 connections. Servers that cap connections per user are handled automatically.</p></div>
+        <div class="feature"><span class="tag">Resume</span><h3>Pick up where you stopped</h3><p>Pause, close Jiza or restart Windows. Jiza fetches only the parts it doesn't have yet.</p></div>
+        <div class="feature"><span class="tag">Browser</span><h3>Takes over browser downloads</h3><p>Works with Chrome, Edge and Brave. Your sign-in carries over, so downloads that need a login work too.</p></div>
+        <div class="feature"><span class="tag">Video</span><h3>Videos from 1,000+ sites</h3><p>A Download with Jiza button appears over videos. Choose the quality, or keep just the audio.</p></div>
+        <div class="feature"><span class="tag">Torrents</span><h3>Magnets and .torrent files</h3><p>Paste a magnet link or open a .torrent file. Jiza finds peers and checks every piece.</p></div>
+        <div class="feature"><span class="tag">Scheduler</span><h3>Download overnight</h3><p>Start the queue at a set time, cap the speed, then let Jiza put the PC to sleep when it's done.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="head">
+        <h2>Paste any link</h2>
+        <p class="muted">Jiza reads the address and the server's answer, then picks the right way to fetch it. Copy a link anywhere and Jiza offers to download it.</p>
+      </div>
+      <table class="links">
+        <tbody>
+          <tr><td><code>https://cdn.example.com/setup.exe</code></td><td>Files over HTTP and HTTPS, split across many connections.</td></tr>
+          <tr><td><code>ftp://mirror.example.org/pub/disk.iso</code></td><td>FTP and FTPS, with resume.</td></tr>
+          <tr><td><code>https://stream.example.com/live/index.m3u8</code></td><td>HLS streams: segments fetched in parallel, decrypted and joined into one video.</td></tr>
+          <tr><td><code>https://www.youtube.com/watch?v=…</code></td><td>Video pages, with a choice of quality.</td></tr>
+          <tr><td><code>magnet:?xt=urn:btih:…</code></td><td>Torrents, with DHT and peer exchange.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="head">
+        <h2>Measured, not promised</h2>
+        <p class="muted">From the first test session, on a line that tops out near 20 MB/s. A single-connection download on the same line reached 20.7 MB/s; Jiza matched the line.</p>
+      </div>
+      <pre class="log"><span class="dim">file                          size      result</span>
+1GB.zip (thinkbroadband)      1.00 GB   <span class="ok">done in 56 s · peak 24.9 MB/s</span>
+                                        <span class="dim">started with 16 lanes, split into 35</span>
+debian-13.7.0 netinst.iso     756 MB    <span class="ok">torrent · SHA-256 matches Debian</span>
+Big Buck Bunny 4K (Blender)   689 MB    <span class="ok">3840×2160 AV1 + Opus, 10:34</span>
+pause → quit → reopen → resume          <span class="ok">no byte fetched twice</span></pre>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="head">
+        <h2>Install in two minutes</h2>
+        <p class="muted">No installer and no account. Settings and history stay on your PC.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3>Download and run JizaDM.exe</h3>
+          <p>Save it anywhere, such as your Desktop, and double-click it. On first start you accept the free license, and Jiza connects itself to your browsers.</p>
+        </li>
+        <li>
+          <h3>Open your browser's extensions page</h3>
+          <p>Go to chrome://extensions (Edge: edge://extensions) and turn on Developer mode.</p>
+        </li>
+        <li>
+          <h3>Load the Jiza extension</h3>
+          <p>Click Load unpacked and choose this folder:</p>
+          <div class="copy-row"><code id="ext-path">%AppData%\JizaDM\extension</code><button type="button" id="copy-path">Copy path</button></div>
+        </li>
+        <li>
+          <h3>Download something</h3>
+          <p>Click any file link. Jiza opens with the name, size and folder filled in. Over a video, use the Download with Jiza button.</p>
+        </li>
+      </ol>
+      <div class="note"><strong>If Windows shows "Windows protected your PC":</strong> Jiza is new and not yet code-signed, so SmartScreen doesn't recognise it. Choose More info, then Run anyway. You can check the file first against the SHA-256 shown below.</div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details><summary>Is Jiza really free?</summary><p>Yes. You can use it on any number of PCs, at home or at work, at no cost. There are no ads, no trial period and no paid tier. The <a href="/license">license</a> covers the details.</p></details>
+        <details><summary>Does Jiza collect any data?</summary><p>No. There are no analytics. Jiza only contacts the sites you download from, the yt-dlp and FFmpeg releases on GitHub when you first use video features, and torrent peers when you download a torrent.</p></details>
+        <details><summary>How do I know the file is genuine?</summary><p>Compare its SHA-256 with the one on this page. In PowerShell, run <code>Get-FileHash JizaDM.exe</code> in the folder you saved it to.</p></details>
+        <details><summary>What can't it download?</summary><p>Streams protected by DRM, such as Netflix, Disney+ and Spotify. Jiza doesn't bypass copy protection. Only download files you have the right to keep.</p></details>
+        <details><summary>Does it work with Firefox?</summary><p>Not yet. The browser extension supports Chrome, Edge, Brave and Vivaldi. In any browser you can still copy a link; Jiza notices it and offers to download.</p></details>
+        <details><summary>How do I remove it?</summary><p>Close Jiza from its tray icon, delete JizaDM.exe, and delete the folder %AppData%\JizaDM. Remove the extension from your browser's extensions page.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <div class="box">
+        <div>
+          <h2 style="margin-bottom:.4rem">Download Jiza Download Manager</h2>
+          <p class="muted" style="margin:0">Version 1.0.0 · 73.3 MB · Windows 10 and 11, 64-bit</p>
+          <p class="hash">SHA-256 0d89abc496b455bc6a13c58d4d01673445b22952b3e007c5286a30178fe14a35</p>
+        </div>
+        <a class="btn btn-primary" href="/download/JizaDM.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v3h16v-3"/></svg>
+          Download for Windows
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>© 2026 Jiza. Free to use under the Jiza freeware license.</span>
+    <nav aria-label="Legal">
+      <a href="/license">License</a>
+      <a href="/license#notices">Third-party notices</a>
+      <a href="/license#privacy">Privacy</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const canvas = document.getElementById("ribbon");
+  const ctx = canvas.getContext("2d");
+  const got = document.getElementById("got"), lanesOut = document.getElementById("lanes"), rateOut = document.getElementById("rate");
+  const TOTAL = 5.8 * 1024, MIN_SPLIT = 48, SPEEDUP = 10;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let segments, workers, last, finishedAt;
+  const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  function reset() {
+    const n = 16, size = TOTAL / n;
+    segments = Array.from({ length: n }, (_, i) => ({ start: i * size, end: (i + 1) * size, done: 0, owner: i }));
+    workers = Array.from({ length: n }, (_, i) => ({ id: i, speed: 0.8 + Math.random() * 1.4, seg: segments[i] }));
+    last = performance.now(); finishedAt = 0;
+  }
+  function steal(worker) {
+    let victim = null, most = 0;
+    for (const s of segments) {
+      const left = s.end - (s.start + s.done);
+      if (s.owner !== null && left >= MIN_SPLIT && left > most) { victim = s; most = left; }
+    }
+    if (!victim) { worker.seg = null; return; }
+    const mid = victim.start + victim.done + most / 2;
+    const upper = { start: mid, end: victim.end, done: 0, owner: worker.id };
+    victim.end = mid;
+    segments.splice(segments.indexOf(victim) + 1, 0, upper);
+    worker.seg = upper;
+  }
+  function step(seconds) {
+    let rate = 0;
+    for (const w of workers) {
+      if (!w.seg) continue;
+      const s = w.seg, pace = w.speed * (0.85 + Math.random() * 0.3);
+      s.done = Math.min(s.end - s.start, s.done + pace * seconds);
+      rate += pace;
+      if (s.start + s.done >= s.end) { s.owner = null; steal(w); }
+    }
+    return rate;
+  }
+  function draw() {
+    const dpr = devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const track = token("--rule"), disk = token("--cobalt"), head = token("--filament"), sheet = token("--sheet");
+    ctx.clearRect(0, 0, w, h); ctx.save(); ctx.beginPath(); ctx.roundRect(0, 0, w, h, 8); ctx.clip();
+    ctx.fillStyle = track; ctx.fillRect(0, 0, w, h);
+    for (const s of segments) {
+      const x = (s.start / TOTAL) * w, fill = (s.done / TOTAL) * w;
+      ctx.fillStyle = disk; ctx.fillRect(x, 0, fill, h);
+      if (s.start > 0) { ctx.fillStyle = sheet; ctx.fillRect(x - 0.5, 0, 1, h); }
+      if (s.owner !== null && s.start + s.done < s.end) {
+        const edge = x + fill, glow = ctx.createLinearGradient(edge - 14, 0, edge, 0);
+        glow.addColorStop(0, "rgba(0,0,0,0)"); glow.addColorStop(1, head);
+        ctx.globalAlpha = 0.45; ctx.fillStyle = glow; ctx.fillRect(edge - 14, 0, 14, h);
+        ctx.globalAlpha = 1; ctx.fillStyle = head; ctx.fillRect(edge - 1.5, 0, 3, h);
+      }
+    }
+    ctx.restore();
+  }
+  function report(rate) {
+    const done = segments.reduce((a, s) => a + s.done, 0);
+    got.textContent = done >= 1024 ? (done / 1024).toFixed(2) + " GB" : Math.round(done) + " MB";
+    lanesOut.textContent = segments.length;
+    rateOut.textContent = rate.toFixed(1) + " MB/s";
+    return done;
+  }
+  function frame(now) {
+    const seconds = Math.min(0.1, (now - last) / 1000) * SPEEDUP; last = now;
+    const done = report(step(seconds)); draw();
+    if (done >= TOTAL - 0.01) { rateOut.textContent = "complete"; finishedAt ||= now; if (now - finishedAt > 2400) reset(); }
+    requestAnimationFrame(frame);
+  }
+  function still() { reset(); let rate = 0; for (let i = 0; i < 1900; i++) rate = step(1); report(rate); draw(); }
+  addEventListener("resize", draw);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  if (reduced) still(); else { reset(); draw(); requestAnimationFrame(frame); }
+
+  const copy = document.getElementById("copy-path");
+  copy.addEventListener("click", async () => {
+    const code = document.getElementById("ext-path");
+    try { await navigator.clipboard.writeText(code.textContent); copy.textContent = "Copied"; }
+    catch { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); copy.textContent = "Press Ctrl+C"; }
+    setTimeout(() => (copy.textContent = "Copy path"), 2000);
+  });
+})();
+</script>
+</body>
+</html>
