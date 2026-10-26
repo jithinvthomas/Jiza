@@ -11,6 +11,8 @@ export async function onRequest({ request, env, params }) {
     return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   }
 
+  // If the R2 binding is ever missing, answer plainly instead of throwing.
+  if (!env.FILES) return new Response("Downloads are being set up. Please try again shortly.", { status: 503, headers: { "Retry-After": "300" } });
   const head = await env.FILES.head(release.key);
   if (!head) return new Response("This release is not available right now.", { status: 503 });
   const size = head.size;
