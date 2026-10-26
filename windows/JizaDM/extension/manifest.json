@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Jiza Download Manager",
+  "version": "1.0.0",
+  "description": "Send downloads, links and videos to Jiza Download Manager for multi-connection speed.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/XY1zvkAvj10KtMBXyvJZtEGxv/oR3kGY4/z2uW4nbcRTkCZWkXNdJ6G3paNxzsrv+AiidbUormNBlZJjdSv99MSOR1nCNxp7bq6NaYSAxXKqH5tjsJSm/bJYjBa9e9CN3zVo/gwZ/1hIIA1HGJj+H36bPwblUnfaTR+l50hJco02u6hmW7kVGRGkQiErjyM4ca/Fwn3Wzvr4Yu37NYrKucMF+562hZPkHjo1OyBJPPyf+JJT7TlP0YgHcnEnIsdttQfpZjBvF3s68IrtdbGAQbaF4ChTF4+f3bDw9Mopx5DLxfS8tj7TtLyQWawum5Ocm4nMtl6hHgHZzRgU6QPQIDAQAB",
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "Jiza Download Manager",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["downloads", "contextMenus", "nativeMessaging", "cookies", "storage", "webRequest", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    { "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ]
+}

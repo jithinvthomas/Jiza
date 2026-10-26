@@ -1,0 +1,86 @@
+JIZA DOWNLOAD MANAGER - THIRD-PARTY NOTICES
+
+Jiza Download Manager includes the open-source components below. Each is
+used under its own license, reproduced here as that license requires.
+
+========================================================================
+MonoTorrent 3.0.2 - https://github.com/alanmcgovern/monotorrent
+========================================================================
+MIT License
+
+Copyright (C) 2006 Alan McGovern, Olivier Dufour
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+========================================================================
+Mono.Nat 3.0.0 (bundled with MonoTorrent) - https://github.com/alanmcgovern/Mono.Nat
+========================================================================
+
+The MIT License
+
+Copyright (C) 2006 Alan McGovern
+Copyright (C) 2007 Ben Motmans
+Copyright (C) 2013 Nicholas Terry
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+
+========================================================================
+FluentFTP 55.1.0 - https://github.com/robinrodricks/FluentFTP
+========================================================================
+Copyright (c) 2015 Robin Rodricks and FluentFTP Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+========================================================================
+.NET 10 runtime and WPF (bundled in JizaDM.exe) - https://github.com/dotnet
+========================================================================
+MIT License. Copyright (c) .NET Foundation and Contributors.
+Full text: https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+
+========================================================================
+Fetched on demand, not included in JizaDM.exe
+========================================================================
+yt-dlp (The Unlicense) - https://github.com/yt-dlp/yt-dlp
+FFmpeg builds by yt-dlp/FFmpeg-Builds (GNU GPL v3) - https://github.com/yt-dlp/FFmpeg-Builds
+These are separate programs downloaded from their official releases when
+you use video features. Their source code is available at those links.
