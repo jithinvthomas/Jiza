@@ -5,7 +5,7 @@ using Jiza.Core.Model;
 
 namespace Jiza.Core.Engine;
 
-public sealed record MediaProbe(string Title, string FileName, IReadOnlyList<MediaChoice> Choices);
+public sealed record MediaProbe(string Title, string FileName, IReadOnlyList<MediaChoice> Choices, bool HasFfmpeg);
 
 /// Wraps yt-dlp, which extracts the real video URLs from 1000+ sites (YouTube, Vimeo, X, TikTok...) and DASH manifests.
 public static class YtDlp
@@ -49,17 +49,11 @@ public static class YtDlp
                 }
             }
         }
-        string Best(int? height)
-        {
-            var limit = height is null ? "" : $"[height<={height}]";
-            return hasFfmpeg ? $"bv*{limit}+ba/b{limit}" : $"b{limit}";
-        }
-        choices.Add(new MediaChoice("Best quality", Best(null), -1));
-        foreach (var h in heights.Where(h => h >= 144).Take(8)) choices.Add(new MediaChoice($"{h}p", Best(h), -1));
-        choices.Add(new MediaChoice("Audio only", hasFfmpeg ? "ba/b" : "ba[acodec!=none]/b", bestAudio > 0 ? bestAudio : -1));
-        if (hasFfmpeg) choices.Add(new MediaChoice("Audio only (MP3)", "ba/b|mp3", -1));
+        choices.Add(new MediaChoice("Best quality", MediaStreamKind.Video, null, -1));
+        foreach (var h in heights.Where(h => h >= 144).Take(8)) choices.Add(new MediaChoice($"{h}p", MediaStreamKind.Video, h, -1));
+        choices.Add(new MediaChoice("Audio only", MediaStreamKind.Audio, null, bestAudio > 0 ? bestAudio : -1));
         var ext = root.TryGetProperty("ext", out var e) ? e.GetString() ?? "mp4" : "mp4";
-        return new MediaProbe(title, FileNaming.Safe(title) + "." + ext, choices);
+        return new MediaProbe(title, FileNaming.Safe(title) + "." + ext, choices, hasFfmpeg);
     }
 
     static long Size(JsonElement f)
@@ -147,8 +141,6 @@ public sealed class MediaDownloader : IDownloader
         Directory.CreateDirectory(item.Folder);
 
         var selector = item.MediaFormat ?? (ctx.Tools.Ffmpeg is null ? "b" : "bv*+ba/b");
-        var audioToMp3 = selector.EndsWith("|mp3");
-        if (audioToMp3) selector = selector[..^4];
 
         var args = new List<string>
         {
@@ -163,7 +155,10 @@ public sealed class MediaDownloader : IDownloader
             "--print", "after_move:JZF %(filepath)s",
         };
         if (ctx.Tools.Ffmpeg is { } ffmpeg) { args.Add("--ffmpeg-location"); args.Add(ffmpeg); }
-        if (audioToMp3) { args.Add("-x"); args.Add("--audio-format"); args.Add("mp3"); }
+        // Force the chosen container (e.g. mp4 instead of yt-dlp's default webm/mkv) when merging.
+        if (item.MediaMerge is { } merge) { args.Add("--merge-output-format"); args.Add(merge); }
+        // Extract/convert to the chosen audio codec for "Audio only" downloads.
+        if (item.MediaAudioCodec is { } audioCodec) { args.Add("-x"); args.Add("--audio-format"); args.Add(audioCodec); }
         var limit = new[] { item.SpeedLimit, ctx.Settings.GlobalSpeedLimit }.Where(l => l > 0).DefaultIfEmpty(0).Min();
         if (limit > 0) { args.Add("--limit-rate"); args.Add(limit.ToString(CultureInfo.InvariantCulture)); }
         YtDlp.AddHeaders(args, item.Headers);

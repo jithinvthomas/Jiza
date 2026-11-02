@@ -35,6 +35,10 @@ public sealed class DownloadItem : INotifyPropertyChanged
     public long SpeedLimit { get; set; }
     /// yt-dlp format selector or HLS variant chosen in the add dialog.
     public string? MediaFormat { get; set; }
+    /// Container to merge video+audio into ("mp4"/"webm"/"mkv"), or null to keep yt-dlp's default.
+    public string? MediaMerge { get; set; }
+    /// Codec to extract to for "Audio only" ("mp3"/"m4a"/"wav"), or null to keep the native audio.
+    public string? MediaAudioCodec { get; set; }
     public bool InSchedule { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.Now;
     public DateTime? CompletedAt { get => _completedAt; set => Set(ref _completedAt, value); }
