@@ -4,8 +4,6 @@ using Jiza.Core.Model;
 
 namespace Jiza.Core.Engine;
 
-public sealed record MediaChoice(string Label, string Selector, long EstimatedBytes);
-
 public sealed record LinkInfo(DownloadKind Kind, string FileName, long Size, string? Mime, bool Resumable)
 {
     public string? Note { get; init; }

@@ -14,6 +14,8 @@ public sealed record DownloadRequest(string Url)
     public string? Cookies { get; init; }
     public string? UserAgent { get; init; }
     public string? MediaFormat { get; init; }
+    public string? MediaMerge { get; init; }
+    public string? MediaAudioCodec { get; init; }
     public long TotalBytes { get; init; } = -1;
     public Dictionary<string, string>? Headers { get; init; }
 }
@@ -90,6 +92,8 @@ public sealed class DownloadManager : IDisposable
             Folder = request.Folder ?? Settings.FolderFor(category),
             Connections = Settings.Connections,
             MediaFormat = request.MediaFormat,
+            MediaMerge = request.MediaMerge,
+            MediaAudioCodec = request.MediaAudioCodec,
             TotalBytes = request.TotalBytes,
             InSchedule = schedule,
             State = DownloadState.Paused,

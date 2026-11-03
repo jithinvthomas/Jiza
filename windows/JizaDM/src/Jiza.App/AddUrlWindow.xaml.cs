@@ -125,6 +125,18 @@ public partial class AddUrlWindow : Window
         _ => "Link",
     };
 
+    // The Format choices depend on whether a video resolution or "Audio only" is selected.
+    void OnQualityChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (FormatBox is null) return;
+        var hasFfmpeg = _manager.Tools.Ffmpeg is not null;
+        var options = (QualityBox.SelectedItem as MediaChoice)?.Kind == MediaStreamKind.Audio
+            ? MediaSelector.AudioCodecs(hasFfmpeg)
+            : MediaSelector.VideoContainers(hasFfmpeg);
+        FormatBox.ItemsSource = options;
+        FormatBox.SelectedIndex = options.Count > 0 ? 0 : -1;
+    }
+
     void OnCategoryChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_folderEdited || CategoryBox.SelectedItem is not string category || FolderBox is null) return;
@@ -159,15 +171,22 @@ public partial class AddUrlWindow : Window
         var url = UrlBox.Text.Trim();
         if (!Uri.TryCreate(url, UriKind.Absolute, out _)) { ShowError("Enter a full address to download."); return; }
         if (string.IsNullOrWhiteSpace(FolderBox.Text)) { ShowError("Choose a folder."); return; }
-        var choice = QualityBox.SelectedItem as MediaChoice;
         var kind = _info?.Kind ?? LinkAnalyzer.GuessKind(url);
+        MediaPlan? plan = null;
+        if (kind == DownloadKind.Media && QualityBox.SelectedItem is MediaChoice choice)
+        {
+            var format = FormatBox.SelectedItem as MediaFormatOption ?? new MediaFormatOption("Original", null);
+            plan = MediaSelector.Build(choice, format, _manager.Tools.Ffmpeg is not null);
+        }
         var item = _manager.Add(new DownloadRequest(url)
         {
             Kind = kind,
             // Video sites name the file from the title; a chosen name is kept for other kinds.
             FileName = kind == DownloadKind.Media ? null : NameBox.Text.Trim(),
             Folder = FolderBox.Text.Trim(),
-            MediaFormat = choice?.Selector,
+            MediaFormat = plan?.Selector,
+            MediaMerge = plan?.MergeContainer,
+            MediaAudioCodec = plan?.AudioCodec,
             TotalBytes = _info?.Size ?? -1,
             Headers = Headers(),
         }, start: false, schedule: !start);

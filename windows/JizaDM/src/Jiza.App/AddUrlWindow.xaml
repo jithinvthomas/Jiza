@@ -26,10 +26,21 @@
                     <TextBlock Text="Save as" Style="{StaticResource Caption}" Margin="0,14,0,6" />
                     <TextBox x:Name="NameBox" />
 
-                    <StackPanel x:Name="QualityPanel" Visibility="Collapsed">
-                        <TextBlock Text="Quality" Style="{StaticResource Caption}" Margin="0,14,0,6" />
-                        <ComboBox x:Name="QualityBox" DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
-                    </StackPanel>
+                    <Grid x:Name="QualityPanel" Visibility="Collapsed" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Quality" Style="{StaticResource Caption}" Margin="0,0,0,6" />
+                            <ComboBox x:Name="QualityBox" DisplayMemberPath="Label" SelectionChanged="OnQualityChanged" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Format" Style="{StaticResource Caption}" Margin="0,0,0,6" />
+                            <ComboBox x:Name="FormatBox" DisplayMemberPath="Label" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </Grid>
 
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
