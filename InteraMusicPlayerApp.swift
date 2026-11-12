@@ -7,21 +7,22 @@ struct InteraMusicPlayerApp: App {
 
     init() {
         try? AVAudioSession.sharedInstance().setCategory(
-            .playback,
-            mode: .default,
+            .playback, mode: .default,
             options: [.allowAirPlay, .allowBluetoothA2DP]
         )
-
         try? AVAudioSession.sharedInstance().setActive(true)
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(player)
-                .onOpenURL { url in
-                    player.openIncomingFile(url)
-                }
+            TabView {
+                ContentView()
+                    .tabItem { Label("Music", systemImage: "music.note") }
+                PocketTerminalView()
+                    .tabItem { Label("Terminal", systemImage: "terminal") }
+            }
+            .environmentObject(player)
+            .onOpenURL { url in player.openIncomingFile(url) }
         }
     }
 }
