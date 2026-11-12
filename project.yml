@@ -16,6 +16,7 @@ targets:
       - ContentView.swift
       - InteraMusicPlayerApp.swift
       - PocketTerminalView.swift
+      - JizaRemoteDesktopView.swift
     info:
       path: Info.plist
     settings:
