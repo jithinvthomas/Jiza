@@ -1,14 +1,11 @@
 name: InteraMusicPlayer
-
 options:
   deploymentTarget:
     iOS: 16.0
   bundleIdPrefix: com.interaauditsolutions
-
 settings:
   base:
     SWIFT_VERSION: 5.0
-
 targets:
   InteraMusicPlayer:
     type: application
@@ -18,6 +15,9 @@ targets:
       - AudioPlayerModel.swift
       - ContentView.swift
       - InteraMusicPlayerApp.swift
+      - PocketTerminalView.swift
+      - JizaRemoteDesktopView.swift
+      - JizaWorkspaceDesign.swift
     info:
       path: Info.plist
     settings:
