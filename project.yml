@@ -17,6 +17,7 @@ targets:
       - InteraMusicPlayerApp.swift
       - PocketTerminalView.swift
       - JizaRemoteDesktopView.swift
+      - JizaWorkspaceDesign.swift
     info:
       path: Info.plist
     settings:
