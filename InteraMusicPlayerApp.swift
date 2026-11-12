@@ -20,6 +20,8 @@ struct InteraMusicPlayerApp: App {
                     .tabItem { Label("Music", systemImage: "music.note") }
                 PocketTerminalView()
                     .tabItem { Label("Terminal", systemImage: "terminal") }
+                JizaRemoteDesktopView()
+                    .tabItem { Label("Desktop", systemImage: "desktopcomputer") }
             }
             .environmentObject(player)
             .onOpenURL { url in player.openIncomingFile(url) }
