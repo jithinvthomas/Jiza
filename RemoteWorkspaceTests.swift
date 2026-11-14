@@ -12,7 +12,7 @@ final class RemoteWorkspaceTests: XCTestCase {
     func testDesktopClientKeyIsEncodedAsAFragment() throws {
         let url = try XCTUnwrap(RemoteWorkspacePolicy.desktopURL(gateway: "https://node.example/guacamole/", clientKey: "MQBjAHBvc3RncmVzcWw="))
         XCTAssertEqual(url.host, "node.example")
-        XCTAssertEqual(url.path, "/guacamole/")
+        XCTAssertEqual(URLComponents(url: url, resolvingAgainstBaseURL: false)?.path, "/guacamole/")
         XCTAssertEqual(url.fragment, "/client/MQBjAHBvc3RncmVzcWw=")
         XCTAssertNil(RemoteWorkspacePolicy.desktopURL(gateway: "https://node.example/", clientKey: ""))
         XCTAssertNil(RemoteWorkspacePolicy.desktopURL(gateway: "https://node.example/", clientKey: "../invalid#link"))

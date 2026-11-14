@@ -49,6 +49,8 @@ final class AudioPlayerModelTests: XCTestCase {
         let subscription = player.$currentArtwork.compactMap { $0 }.first().sink { _ in loaded.fulfill() }
         defer { subscription.cancel(); player.pause() }
         player.openIncomingFile(covered)
+        // The 0.3-second fixture otherwise loops and clears its artwork again.
+        player.pause()
         await fulfillment(of: [loaded], timeout: 10)
         XCTAssertNotNil(player.currentArtwork)
         player.openIncomingFile(plain)

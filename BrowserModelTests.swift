@@ -215,9 +215,14 @@ extension BrowserModelTests {
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         XCTAssertTrue(browser.protection.ready, browser.protection.error ?? "Browser protection did not initialize")
-        tab.web.load(URLRequest(url: base.appendingPathComponent("links")))
-        for _ in 0..<200 { if tab.web.title == "Download links" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+        let linksURL = base.appendingPathComponent("links")
+        tab.web.load(URLRequest(url: linksURL))
+        // A cold WebKit process can spend over ten seconds initializing on CI.
+        // Wait for this navigation to finish before clicking its document.
+        for _ in 0..<600 { if tab.web.url == linksURL && !tab.web.isLoading && tab.web.title == "Download links" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
         XCTAssertEqual(tab.web.title, "Download links")
+        XCTAssertFalse(tab.web.isLoading)
+        guard tab.web.title == "Download links", !tab.web.isLoading else { return }
         for id in ["video", "audio", "redirect", "torrent"] {
             let count = browser.downloads.items.count
             // IDs are fixed test constants, never external page data.
@@ -248,7 +253,7 @@ extension BrowserModelTests {
             browser.protection.setAdBlock(blocked)
             let url = URL(string: "http://127.0.0.1:8765/ad-test?\(UUID().uuidString)")!
             tab.web.load(URLRequest(url: url))
-            for _ in 0..<200 { if tab.web.url == url && !tab.web.isLoading && tab.web.title == "Ad test" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+            for _ in 0..<600 { if tab.web.url == url && !tab.web.isLoading && tab.web.title == "Ad test" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
             XCTAssertEqual(tab.web.url, url)
             XCTAssertFalse(tab.web.isLoading)
             let loaded = try await tab.web.evaluateJavaScript("Boolean(window.jizaAdLoaded)") as? Bool
