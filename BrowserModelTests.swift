@@ -98,6 +98,38 @@ final class BrowserModelTests: XCTestCase {
 }
 
 extension BrowserModelTests {
+    func testHTTPFailureMessageSurvivesWebKitCancellationAndRetry() async throws {
+        let browser = model()
+        let tab = try XCTUnwrap(browser.selected)
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        tab.web.frame = window.bounds
+        window.addSubview(tab.web)
+        defer { tab.web.removeFromSuperview() }
+        let previousIDs = Set(browser.downloads.items.map(\.id))
+        browser.downloads.start(URLRequest(url: URL(string: "http://127.0.0.1:8765/forbidden")!), web: tab.web, isPrivate: false)
+        for _ in 0..<300 {
+            if let item = browser.downloads.items.first, !previousIDs.contains(item.id), !item.active { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        let item = try XCTUnwrap(browser.downloads.items.first { !previousIDs.contains($0.id) })
+        defer { browser.downloads.remove(item) }
+        // Allow the cancellation delegate callback after rejecting the destination.
+        try await Task.sleep(nanoseconds: 250_000_000)
+        XCTAssertTrue(item.status.contains("HTTP 403"), item.status)
+        XCTAssertTrue(item.canRetry)
+        XCTAssertNil(item.localURL)
+        item.retry()
+        XCTAssertTrue(item.active)
+        for _ in 0..<300 {
+            if !item.active { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        try await Task.sleep(nanoseconds: 250_000_000)
+        XCTAssertFalse(item.active)
+        XCTAssertTrue(item.status.contains("HTTP 403"), item.status)
+        XCTAssertTrue(item.canRetry)
+    }
+
     func testWebNavigationHistoryCookiesAndDownloadToChosenFolder() async throws {
         let payload = Data("Jiza downloaded file fixture".utf8)
         let base = URL(string: "http://127.0.0.1:8765")!

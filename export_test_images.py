@@ -9,9 +9,9 @@ result = "TestResults.xcresult"
 output = pathlib.Path("test-images")
 output.mkdir(exist_ok=True)
 
-# Xcode 26 replaced the JSON object API with a direct attachment exporter.
+# Xcode 16 introduced the direct attachment exporter and deprecated the object API.
 xcode_major = int(subprocess.check_output(["xcodebuild", "-version"], text=True).splitlines()[0].split()[1].split(".")[0])
-if xcode_major >= 26:
+if xcode_major >= 16:
     subprocess.run(["xcrun", "xcresulttool", "export", "attachments",
                     "--path", result, "--output-path", str(output)], check=True)
     sys.exit(0)
