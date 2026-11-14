@@ -149,6 +149,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         guard !active, !cancellationPending, canRetry, let web, let request = originalRequest else { return }
         active = true
         canRetry = false
+        status = "Downloading"
+        download?.delegate = nil; download = nil; observation = nil
         requestGeneration = UUID()
         let generation = requestGeneration
         web.startDownload(using: request) { [weak self] download in
@@ -183,6 +185,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         guard !active, !cancellationPending, let resumeData, let web else { return }
         active = true
         canResume = false
+        status = "Downloading"
+        download?.delegate = nil; download = nil; observation = nil
         requestGeneration = UUID()
         let generation = requestGeneration
         web.resumeDownload(fromResumeData: resumeData) { [weak self] download in
