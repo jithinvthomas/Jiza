@@ -1,6 +1,36 @@
 import XCTest
 
 final class MusicPlayerUITests: XCTestCase {
+    func testRemoteWorkspaceIsPartOfTheAllInOneHome() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-oracleTerminalGatewayURL", "http://invalid.example", "-pocketTerminalGatewayURL", "http://invalid.example", "-jizaRemoteGatewayURL", "http://invalid.example"]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        let terminal = app.buttons["homeTerminal"]
+        for _ in 0..<8 { if terminal.exists && terminal.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(terminal.isHittable)
+        capture(app, name: "Jiza All In One Workspace Home")
+        terminal.tap()
+        XCTAssertTrue(app.buttons["terminalOracle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["terminalWindows"].exists)
+        capture(app, name: "Jiza Terminal Claude Code and Codex")
+        app.buttons["terminalOracle"].tap()
+        XCTAssertTrue(app.textFields["terminalGateway"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save Connection"].isEnabled)
+        app.buttons["Done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let desktop = app.buttons["homeDesktop"]
+        for _ in 0..<8 { if desktop.exists && desktop.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(desktop.isHittable)
+        desktop.tap()
+        XCTAssertTrue(app.buttons["desktopOracle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["desktopWindows"].exists)
+        capture(app, name: "Jiza Remote Desktop")
+        app.buttons["desktopOracle"].tap()
+        XCTAssertTrue(app.textFields["desktopGateway"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save Connections"].isEnabled)
+    }
+
     func testLandscapeAndReturnToPortrait() {
         let app = XCUIApplication()
         XCUIDevice.shared.orientation = .portrait

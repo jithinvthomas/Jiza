@@ -5,6 +5,9 @@ The default `main` branch contains a separate Windows download-manager update an
 
 ## Release fixes
 
+- Combine PR #4's Terminal and Remote Desktop with Music, Video, Browser, Downloader and Trading in the same home screen. Keep existing media, browser, lock and download code.
+- Terminal and Desktop share an HTTPS-only viewer with connection errors, isolated in-memory website data and cleanup on leaving. Saved gateway addresses reject credentials, queries and fragments. No SSH/RDP service is deployed or exposed by this source integration.
+
 - Preserve HTTP and destination errors when WebKit subsequently reports cancellation.
 - Wait for cancellation to finish before exposing Resume or Retry. Reject callbacks from replaced transfers and honor cancellation while a new transfer is being created.
 - Preserve the atomic saving step; saved files must not acquire a Retry action through cancellation.

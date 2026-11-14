@@ -23,6 +23,10 @@ targets:
       - ContentView.swift
       - JizaHomeView.swift
       - TradingDashboardView.swift
+      - PocketTerminalView.swift
+      - JizaRemoteDesktopView.swift
+      - JizaWorkspaceDesign.swift
+      - RemoteWorkspaceSession.swift
       - SharedInbox.swift
       - TorrentModel.swift
       - JizaDesign.swift
@@ -130,6 +134,7 @@ targets:
       - VideoPlayerModelTests.swift
       - BrowserModelTests.swift
       - TradingDashboardTests.swift
+      - RemoteWorkspaceTests.swift
       - TorrentTests.swift
       - AppSecurityTests.swift
       - path: TestFixtures
