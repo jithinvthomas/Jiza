@@ -52,7 +52,7 @@ struct JizaRemoteDesktopView: View {
                             .accessibilityIdentifier("desktopOracle")
                             JizaWorkspaceCard(
                                 title: "Windows PC",
-                                detail: "Windows Pro · Remote Desktop",
+                                detail: "Windows · Remote desktop",
                                 symbol: "desktopcomputer",
                                 color: JizaStyle.violet
                             ) { connect(.windows) }
@@ -148,6 +148,10 @@ struct JizaRemoteDesktopView: View {
         }
         .tint(JizaStyle.mint)
         .preferredColorScheme(.dark)
+        .onDisappear {
+            activeTarget = nil
+            sessionDataStore = .nonPersistent()
+        }
     }
 
     private func configure() {

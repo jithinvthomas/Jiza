@@ -158,6 +158,10 @@ struct PocketTerminalView: View {
         }
         .tint(JizaStyle.mint)
         .preferredColorScheme(.dark)
+        .onDisappear {
+            activeURL = nil; activeHost = nil
+            sessionDataStore = .nonPersistent()
+        }
     }
 
     private func commandTile(_ name: String, command: String, symbol: String) -> some View {
