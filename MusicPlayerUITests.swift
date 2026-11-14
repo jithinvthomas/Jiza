@@ -162,9 +162,15 @@ extension MusicPlayerUITests {
         capture(app, name: "Jiza Browser Tabs")
         app.buttons["New tab"].tap()
         app.buttons["Downloads"].tap()
-        XCTAssertTrue(app.buttons["Choose download folder"].waitForExistence(timeout: 5))
+        let chooseFolder = app.buttons["Choose download folder"]
+        for _ in 0..<8 {
+            if chooseFolder.exists && chooseFolder.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(chooseFolder.waitForExistence(timeout: 5))
+        XCTAssertTrue(chooseFolder.isHittable)
         capture(app, name: "Jiza Browser Downloads")
-        app.buttons["Choose download folder"].tap()
+        chooseFolder.tap()
         XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 30))
         app.buttons["Cancel"].tap()
         app.buttons["Done"].tap()

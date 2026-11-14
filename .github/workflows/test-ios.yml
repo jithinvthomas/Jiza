@@ -1,7 +1,11 @@
 name: Test Jiza iPhone app
 on:
+  workflow_call:
+  pull_request:
   push:
     branches:
+      - main
+      - finish/jiza-all-in-one
       - fix/iphone-layout-folder-picker
       - feature/jiza-home-hub
   workflow_dispatch:
@@ -56,6 +60,14 @@ jobs:
       - name: Export simulator screenshots
         if: always()
         run: python3 export_test_images.py
+      - name: Export readable test results
+        if: always()
+        run: |
+          if [ -d TestResults.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path TestResults.xcresult > test-summary.json \
+              || xcrun xcresulttool get --format json --path TestResults.xcresult > test-summary.json
+            cat test-summary.json
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -65,3 +77,4 @@ jobs:
             test-images
             Podfile.lock
             browser-test-server.log
+            test-summary.json

@@ -58,6 +58,43 @@ final class BrowserModelTests: XCTestCase {
         XCTAssertNotEqual(proposed, existing)
         XCTAssertEqual(try Data(contentsOf: existing), Data([1, 2, 3]))
     }
+
+    func testDownloadFailurePreservesDestinationError() {
+        let owner = BrowserDownloads()
+        let item = BrowserDownload(saved: SavedDownload(name: "file.txt", date: Date()),
+                                   url: BrowserDownloads.directory.appendingPathComponent("file.txt"), owner: owner)
+        item.localURL = nil
+        item.status = "Server returned HTTP 403. Sign in or refresh the download link, then retry."
+        let message = item.status
+        item.recordFailure(URLError(.cancelled), resumeData: nil)
+        XCTAssertEqual(item.status, message)
+        XCTAssertFalse(item.active)
+
+        item.active = true
+        item.recordFailure(URLError(.networkConnectionLost), resumeData: Data([1]))
+        XCTAssertTrue(item.status.hasPrefix("Failed: "))
+        XCTAssertTrue(item.canResume)
+    }
+
+    func testPauseDoesNotExposeActionsBeforeCancellationCompletes() {
+        let owner = BrowserDownloads()
+        let item = BrowserDownload(saved: SavedDownload(name: "file.txt", date: Date()),
+                                   url: BrowserDownloads.directory.appendingPathComponent("file.txt"), owner: owner)
+        item.active = true
+        item.canRetry = true
+        item.canResume = true
+        item.beginCancellation()
+        XCTAssertFalse(item.active)
+        XCTAssertFalse(item.canRetry)
+        XCTAssertFalse(item.canResume)
+        item.recordFailure(URLError(.cancelled), resumeData: Data([9]))
+        XCTAssertFalse(item.canResume)
+        item.finishCancellation(Data([1]))
+        XCTAssertTrue(item.canResume)
+        XCTAssertFalse(item.canRetry)
+        item.finishCancellation(nil) // A duplicate or late callback cannot erase resume data.
+        XCTAssertTrue(item.canResume)
+    }
 }
 
 extension BrowserModelTests {
@@ -168,12 +205,20 @@ extension BrowserModelTests {
     func testAdBlockToggleActuallyBlocksAndRestoresResource() async throws {
         let browser = BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let tab = browser.selected!
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        tab.web.frame = window.bounds
+        window.addSubview(tab.web)
+        defer { tab.web.removeFromSuperview() }
         for _ in 0..<1200 { if browser.protection.ready { break }; try await Task.sleep(nanoseconds: 50_000_000) }
         XCTAssertNil(browser.protection.error)
+        XCTAssertTrue(browser.protection.ready)
         for blocked in [false, true, false] {
             browser.protection.setAdBlock(blocked)
-            tab.web.load(URLRequest(url: URL(string: "http://127.0.0.1:8765/ad-test?\(UUID().uuidString)")!))
-            for _ in 0..<200 { if !tab.web.isLoading && tab.web.title == "Ad test" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+            let url = URL(string: "http://127.0.0.1:8765/ad-test?\(UUID().uuidString)")!
+            tab.web.load(URLRequest(url: url))
+            for _ in 0..<200 { if tab.web.url == url && !tab.web.isLoading && tab.web.title == "Ad test" { break }; try await Task.sleep(nanoseconds: 50_000_000) }
+            XCTAssertEqual(tab.web.url, url)
+            XCTAssertFalse(tab.web.isLoading)
             let loaded = try await tab.web.evaluateJavaScript("Boolean(window.jizaAdLoaded)") as? Bool
             XCTAssertEqual(loaded, !blocked)
         }
