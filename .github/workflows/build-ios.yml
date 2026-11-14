@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - finish/jiza-all-in-one
 
 permissions:
   contents: read
