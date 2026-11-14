@@ -17,6 +17,8 @@ The default `main` branch contains a separate Windows download-manager update an
 
 Native XCTest and archive validation must run on macOS through the checked-in workflows. Windows source checks and review are not substitutes for those results.
 
+Target device: iPhone 14 Pro with the user's latest installed iOS. Compatibility CI uses macOS 15 / Xcode 16.4; macOS 14 runners were retired on 2 November 2026. The other job retains the newer iOS SDK and simulator coverage.
+
 The baseline's macOS 14 simulator job passed. Its macOS 26 job failed in ad-block integration and download-folder UI coverage. These tests remain enabled with their behavior assertions intact.
 
 Before calling the release complete, record the new CI results, package the exact tested commit, and test the signed IPA on iPhone: music/video handoff, calls, Bluetooth, folder permissions after relaunch, share a text file, download pause/resume/retry, app/browser locks, rotation, large text, PiP and Trading connectivity.

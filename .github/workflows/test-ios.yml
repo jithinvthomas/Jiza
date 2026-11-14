@@ -15,12 +15,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-14, macos-26]
+        runner: [macos-15, macos-26]
     runs-on: ${{ matrix.runner }}
     env:
       NATIVE_GLASS: ${{ matrix.runner == 'macos-26' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select compatibility Xcode
+        if: matrix.runner == 'macos-15'
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
       - name: Check Xcode and SDK
         run: |
           xcodebuild -version
