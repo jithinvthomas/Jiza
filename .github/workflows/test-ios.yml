@@ -25,6 +25,9 @@ jobs:
       NATIVE_GLASS: ${{ matrix.runner == 'macos-26' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select native Xcode
+        if: matrix.runner == 'macos-26'
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
       - name: Select compatibility Xcode
         if: matrix.runner == 'macos-15'
         # Xcode 16.4 + iOS 18.5 can fail at launch with missing libswiftWebKit.
@@ -40,6 +43,8 @@ jobs:
       - name: Check Xcode and SDK
         run: |
           xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          xcrun simctl list runtimes
           if [ "$NATIVE_GLASS" = "true" ]; then
             SDK_MAJOR=$(xcrun --sdk iphonesimulator --show-sdk-version | cut -d. -f1)
             test "$SDK_MAJOR" -ge 26
@@ -51,15 +56,19 @@ jobs:
           bash TorrentNative/build.sh iphonesimulator "$(uname -m)"
           xcodegen generate
           sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' Jiza.xcodeproj/project.pbxproj
-      - name: Select available iPhone simulator
+      - name: Create matching iPhone 14 Pro simulator
         # CocoaPods provides the official checksum-verified VLCKit XCFramework.
         run: |
           if [ "$NATIVE_GLASS" = "true" ]; then
-            DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS-26" in k for v in vs if "iPhone" in v["name"]))')
+            SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+            RUNTIME_ID=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; sdk=".".join(sys.argv[1].split(".")[:2]); print(next(r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and "SimRuntime.iOS-" in r["identifier"] and ".".join(r["version"].split(".")[:2]) == sdk))' "$SDK_VERSION")
           else
-            DEVICE_ID=$(xcrun simctl create "Jiza iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro com.apple.CoreSimulator.SimRuntime.iOS-18-4)
+            RUNTIME_ID=com.apple.CoreSimulator.SimRuntime.iOS-18-4
           fi
+          DEVICE_ID=$(xcrun simctl create "Jiza iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro "$RUNTIME_ID")
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
       - name: Install playback framework
         run: |
           brew list cocoapods >/dev/null 2>&1 || brew install cocoapods
