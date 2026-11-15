@@ -95,7 +95,8 @@ extension BrowserTab {
     }
     private func presentLinkActions(for url: URL) {
         // ASVS 2.2.1: keep the existing web-URL allowlist at the UI boundary.
-        guard BrowserModel.isWebURL(url), let owner, owner.selectedID == id else { return }
+        guard BrowserModel.isWebURL(url), let owner, owner.selectedID == id,
+              owner.linkActionTarget == nil else { return }
         owner.linkActionTarget = BrowserLinkTarget(url: url, tab: self)
     }
     func shareLink(_ url: URL) {
