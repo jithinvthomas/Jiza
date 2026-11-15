@@ -35,7 +35,7 @@ struct BrowserView: View {
         .onReceive(browser.downloads.$items.dropFirst()) { items in
             if items.first?.active == true && panel == nil && pendingLinkAction == nil { panel = .downloads }
         }
-        .onReceive(browser.$linkActionTarget) { target in if target != nil { panel = .link } }
+        .onChange(of: browser.linkActionTarget?.id) { requestID in if requestID != nil { panel = .link } }
         .sheet(item: $panel, onDismiss: finishPanelDismissal) { selectedPanel in
             NavigationStack {
                 panelContent(selectedPanel)

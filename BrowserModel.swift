@@ -15,7 +15,8 @@ struct BrowserSession: Codable {
     var selected: Int
 }
 
-struct BrowserLinkTarget {
+struct BrowserLinkTarget: Identifiable {
+    let id = UUID()
     let url: URL
     let tab: BrowserTab
 }
