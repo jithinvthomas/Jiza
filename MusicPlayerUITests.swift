@@ -182,13 +182,14 @@ extension MusicPlayerUITests {
             XCTAssertTrue(app.buttons[title].waitForExistence(timeout: 5), title)
         }
         capture(app, name: "Jiza Link Actions")
-        XCTAssertTrue((address.value as? String)?.contains("/interactions") == true,
-                      "Opening link actions must not navigate the current tab")
         guard selectLinkAction("Save bookmark", in: app) else { return }
         guard link.waitForExistence(timeout: 5) else {
             XCTFail("Saving a bookmark must leave the source page open")
             return
         }
+        // The modal sheet hides background accessibility until dismissal.
+        XCTAssertTrue((address.value as? String)?.contains("/interactions") == true,
+                      "Link actions and bookmarking must not navigate the current tab")
         link.press(forDuration: 1)
         guard selectLinkAction("Open in new tab", in: app) else { return }
         let tabAdded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
