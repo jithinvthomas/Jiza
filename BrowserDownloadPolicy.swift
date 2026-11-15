@@ -42,6 +42,13 @@ extension BrowserTab {
         linkPressRequest = request
         let point = touch.location(in: web)
         let pageURL = web.url
+        resolveLink(at: point) { [weak self] url in
+            guard let self, self.linkPressRequest == request, self.web.url == pageURL else { return }
+            self.pressedLink = url
+        }
+        return true
+    }
+    func resolveLink(at point: CGPoint, completion: @escaping (URL?) -> Void) {
         // Resolve at touch-down so non-link presses can keep native text selection.
         // Arguments are values, never executable page text. The isolated world
         // prevents a website replacing the DOM APIs used by this lookup.
@@ -54,16 +61,24 @@ extension BrowserTab {
         """
         web.callAsyncJavaScript(script, arguments: ["x": point.x, "y": point.y,
             "width": max(web.bounds.width, 1), "height": max(web.bounds.height, 1)],
-            in: nil, in: .defaultClient) { [weak self] result in
-                guard let self, self.linkPressRequest == request, self.web.url == pageURL,
-                      case .success(let value) = result, let text = value as? String,
-                      let url = URL(string: text), BrowserModel.isWebURL(url) else { return }
-                self.pressedLink = url
+            in: nil, in: .defaultClient) { result in
+                guard case .success(let value) = result, let text = value as? String,
+                      let url = URL(string: text), BrowserModel.isWebURL(url) else { completion(nil); return }
+                completion(url)
             }
-        return true
     }
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        pressedLink != nil
+        pressedLink != nil && !web.scrollView.isDragging
+    }
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+        // Give this link-only recognizer priority over native text long presses.
+        // It fails for other content, allowing normal text selection to proceed.
+        other is UILongPressGestureRecognizer
+    }
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        // WebKit's touch delivery and scrolling recognizers must not prevent
+        // lookup; competing tap and long-press actions remain exclusive.
+        !(other is UITapGestureRecognizer || other is UILongPressGestureRecognizer)
     }
     @objc func handleLinkPress(_ gesture: UILongPressGestureRecognizer) {
         if gesture.state == .cancelled || gesture.state == .failed {

@@ -5,6 +5,42 @@ import WebKit
 @MainActor
 final class BrowserModelTests: XCTestCase {
     private func model() -> BrowserModel { BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!) }
+    func testLinkPressLookupUsesIsolatedDOMAndRejectsNonWebLinks() async throws {
+        let browser = model()
+        let tab = try XCTUnwrap(browser.selected)
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        tab.web.frame = window.bounds
+        tab.web.scrollView.contentInsetAdjustmentBehavior = .never
+        window.addSubview(tab.web)
+        defer { tab.web.removeFromSuperview() }
+        tab.web.loadHTMLString("""
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Link lookup</title>
+        <a id="link" href="https://example.com/destination" style="display:block;padding:30px">Example</a>
+        <a id="bad" href="javascript:alert(1)" style="display:block;padding:30px">Unsupported</a>
+        <script>document.elementFromPoint = () => document.getElementById('bad');</script>
+        """, baseURL: URL(string: "https://example.com"))
+        for _ in 0..<600 {
+            if tab.web.title == "Link lookup" && !tab.web.isLoading { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertEqual(tab.web.title, "Link lookup")
+        func point(_ id: String) async throws -> CGPoint {
+            let value = try await tab.web.callAsyncJavaScript("const r = document.getElementById(id).getBoundingClientRect(); return [r.x+r.width/2, r.y+r.height/2];", arguments: ["id": id], in: nil, in: .defaultClient)
+            let values = try XCTUnwrap(value as? [Double])
+            return CGPoint(x: values[0], y: values[1])
+        }
+        let linkPoint = try await point("link")
+        let link = await withCheckedContinuation { continuation in
+            tab.resolveLink(at: linkPoint) { continuation.resume(returning: $0) }
+        }
+        XCTAssertEqual(link?.absoluteString, "https://example.com/destination")
+        let badPoint = try await point("bad")
+        let badLink = await withCheckedContinuation { continuation in
+            tab.resolveLink(at: badPoint) { continuation.resume(returning: $0) }
+        }
+        XCTAssertNil(badLink)
+    }
     func testRestoredTabsKeepTheirURLsWithoutLoadingUntilSelected() async throws {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
         let urls = [URL(string: "http://127.0.0.1:8765/page?background")!,
