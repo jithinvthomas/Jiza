@@ -30,6 +30,13 @@ jobs:
         # Xcode 16.4 + iOS 18.5 can fail at launch with missing libswiftWebKit.
         # https://developer.apple.com/forums/thread/785964
         run: sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
+      - name: Install matching compatibility simulator runtime
+        if: matrix.runner == 'macos-15'
+        run: |
+          if ! xcrun simctl list runtimes -j | python3 -c 'import json,sys; sys.exit(0 if any(r.get("isAvailable") and r["identifier"].endswith("iOS-18-4") for r in json.load(sys.stdin)["runtimes"]) else 1)'; then
+            xcodebuild -downloadPlatform iOS -buildVersion 18.4
+          fi
+          xcrun simctl list runtimes
       - name: Check Xcode and SDK
         run: |
           xcodebuild -version
@@ -47,7 +54,11 @@ jobs:
       - name: Select available iPhone simulator
         # CocoaPods provides the official checksum-verified VLCKit XCFramework.
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,os,sys; d=json.load(sys.stdin); native=os.environ["NATIVE_GLASS"]=="true"; print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k and (not native or "iOS-26" in k) for v in vs if "iPhone" in v["name"]))')
+          if [ "$NATIVE_GLASS" = "true" ]; then
+            DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS-26" in k for v in vs if "iPhone" in v["name"]))')
+          else
+            DEVICE_ID=$(xcrun simctl create "Jiza iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro com.apple.CoreSimulator.SimRuntime.iOS-18-4)
+          fi
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
       - name: Install playback framework
         run: |
