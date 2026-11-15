@@ -5,6 +5,44 @@ import WebKit
 @MainActor
 final class BrowserModelTests: XCTestCase {
     private func model() -> BrowserModel { BrowserModel(defaults: UserDefaults(suiteName: UUID().uuidString)!) }
+    func testRestoredTabsKeepTheirURLsWithoutLoadingUntilSelected() async throws {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let urls = [URL(string: "http://127.0.0.1:8765/page?background")!,
+                    URL(string: "http://127.0.0.1:8765/page?selected")!]
+        defaults.set(try JSONEncoder().encode(BrowserSession(urls: urls, selected: 1)), forKey: "jizaBrowserSession")
+        let browser = BrowserModel(defaults: defaults)
+        XCTAssertEqual(browser.tabs.count, 2)
+        let background = browser.tabs[0]
+        let selected = try XCTUnwrap(browser.selected)
+        XCTAssertEqual(selected.id, browser.tabs[1].id)
+        let window = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow })
+        selected.web.frame = window.bounds
+        window.addSubview(selected.web)
+        defer { selected.web.removeFromSuperview(); background.web.removeFromSuperview() }
+        for _ in 0..<600 {
+            if selected.web.url == urls[1] && !selected.web.isLoading && selected.web.title == "Jiza test page" { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertEqual(selected.web.title, "Jiza test page")
+        XCTAssertNil(background.web.url, "Unselected restored pages must not compete for WebKit processes")
+        browser.persistSession()
+        var saved = try JSONDecoder().decode(BrowserSession.self, from: XCTUnwrap(defaults.data(forKey: "jizaBrowserSession")))
+        XCTAssertEqual(saved.urls, urls)
+        XCTAssertEqual(saved.selected, 1)
+        background.web.frame = window.bounds
+        window.addSubview(background.web)
+        browser.selectedID = background.id
+        for _ in 0..<600 {
+            if background.web.url == urls[0] && !background.web.isLoading && background.web.title == "Jiza test page" { break }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertEqual(background.web.url, urls[0])
+        XCTAssertEqual(background.web.title, "Jiza test page")
+        browser.persistSession()
+        saved = try JSONDecoder().decode(BrowserSession.self, from: XCTUnwrap(defaults.data(forKey: "jizaBrowserSession")))
+        XCTAssertEqual(saved.urls, urls)
+        XCTAssertEqual(saved.selected, 0)
+    }
     func testAddressAndVideoWebsiteRouting() {
         XCTAssertEqual(BrowserModel.addressURL("jiza.app")?.absoluteString, "https://jiza.app")
         XCTAssertEqual(URLComponents(url: BrowserModel.addressURL("music & video")!, resolvingAgainstBaseURL: false)?.queryItems?.first?.value, "music & video")

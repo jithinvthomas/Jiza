@@ -145,8 +145,12 @@ extension MusicPlayerUITests {
 
     func testBrowserPullRefreshAndLinkActions() {
         let app = XCUIApplication()
+        // Each repetition starts with one tab, not every prior live WebKit page.
+        app.launchArguments = ["-jizaBrowserSession", "{}"]
         app.launch()
-        app.buttons["homeBrowser"].tap()
+        let home = app.buttons["homeBrowser"]
+        XCTAssertTrue(home.waitForExistence(timeout: 10))
+        home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let address = app.textFields["webAddress"]
         XCTAssertTrue(address.waitForExistence(timeout: 10))
         address.tap()

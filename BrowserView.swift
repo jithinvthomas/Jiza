@@ -172,8 +172,8 @@ struct BrowserView: View {
             Button { browser.selectedID = tab.id; panel = nil } label: {
                 Label {
                     VStack(alignment: .leading) {
-                        Text(tab.web.title ?? "New tab").lineLimit(1)
-                        Text(tab.web.url?.host ?? (tab.isPrivate ? "Private browsing" : "Start browsing")).font(.caption).foregroundStyle(.secondary)
+                        Text(tab.web.title.flatMap { $0.isEmpty ? nil : $0 } ?? tab.sessionURL?.host ?? "New tab").lineLimit(1)
+                        Text(tab.sessionURL?.host ?? (tab.isPrivate ? "Private browsing" : "Start browsing")).font(.caption).foregroundStyle(.secondary)
                     }
                 } icon: { Image(systemName: tab.isPrivate ? "eye.slash" : "globe") }
             }.buttonStyle(.plain)

@@ -18,7 +18,9 @@ struct BrowserSession: Codable {
 @MainActor
 final class BrowserModel: ObservableObject {
     @Published var tabs: [BrowserTab] = []
-    @Published var selectedID: UUID?
+    @Published var selectedID: UUID? {
+        didSet { selected?.activateRestoredPage() }
+    }
     @Published var bookmarks: [BrowserPage] = []
     @Published var history: [BrowserPage] = []
     @Published var error: String?
@@ -39,10 +41,14 @@ final class BrowserModel: ObservableObject {
         bookmarks = decode([BrowserPage].self, key: "jizaBookmarks") ?? []
         history = decode([BrowserPage].self, key: "jizaHistory") ?? []
         if let session = decode(BrowserSession.self, key: "jizaBrowserSession") {
-            for url in session.urls.prefix(30) where Self.isWebURL(url) { _ = newTab(url: url, save: false) }
+            for url in session.urls.prefix(30) where Self.isWebURL(url) {
+                let tab = newTab(save: false)
+                tab.restoredURL = url
+            }
             if tabs.indices.contains(session.selected) { selectedID = tabs[session.selected].id }
         }
         if tabs.isEmpty { _ = newTab(save: false) }
+        selected?.activateRestoredPage()
     }
 
     nonisolated static func isWebURL(_ url: URL) -> Bool {
@@ -118,8 +124,8 @@ final class BrowserModel: ObservableObject {
     func removeHistory(_ id: UUID) { history.removeAll { $0.id == id }; encode(history, key: "jizaHistory") }
     func persistSession() {
         let normal = tabs.filter { !$0.isPrivate }
-        let urls = normal.compactMap { $0.web.url }.filter(Self.isWebURL)
-        let selectedURL = selected?.isPrivate == false ? selected?.web.url : nil
+        let urls = normal.compactMap(\.sessionURL).filter(Self.isWebURL)
+        let selectedURL = selected?.isPrivate == false ? selected?.sessionURL : nil
         encode(BrowserSession(urls: urls, selected: urls.firstIndex(where: { $0 == selectedURL }) ?? 0), key: "jizaBrowserSession")
     }
     private func encode<T: Encodable>(_ value: T, key: String) { if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) } }
@@ -132,6 +138,9 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
     let isPrivate: Bool
     let web: WKWebView
     weak var owner: BrowserModel?
+    var restoredURL: URL?
+    var sessionURL: URL? { web.url ?? restoredURL }
+    private var restoredPageActivated = false
     @Published var revision = 0
     @Published var desktop = false
     @Published var pageError: String?
@@ -163,6 +172,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
             })
         }
         watch(\.url); watch(\.title); watch(\.estimatedProgress); watch(\.isLoading); watch(\.canGoBack); watch(\.canGoForward)
+    }
+    func activateRestoredPage() {
+        guard !restoredPageActivated, let url = restoredURL, BrowserModel.isWebURL(url) else { return }
+        restoredPageActivated = true
+        web.load(URLRequest(url: url))
     }
     func setDesktop(_ enabled: Bool) {
         desktop = enabled

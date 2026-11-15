@@ -89,6 +89,7 @@ struct JizaHomeView: View {
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .modifier(JizaSurface(interactive: true))
+            .contentShape(Rectangle())
         }
         .buttonStyle(JizaPressStyle())
         .accessibilityElement(children: .combine)
