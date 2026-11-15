@@ -38,25 +38,38 @@ extension BrowserTab {
     }
     func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
         guard let url = elementInfo.linkURL, BrowserModel.isWebURL(url) else { completionHandler(nil); return }
-        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            self?.linkMenu(for: url) ?? UIMenu(children: [])
-        })
+        // Cancel WebKit's preview interaction before presenting an action sheet.
+        // Its native preview menu can remain visible but unresponsive on iOS 26.
+        completionHandler(nil)
+        DispatchQueue.main.async { [weak self] in self?.presentLinkActions(for: url) }
     }
-    func linkMenu(for url: URL) -> UIMenu {
-        guard BrowserModel.isWebURL(url) else { return UIMenu(children: []) }
-        return UIMenu(children: [
-            UIAction(title: "Open in new tab", image: UIImage(systemName: "plus.square.on.square")) { [weak self] _ in
-                guard let self else { return }
-                self.owner?.newTab(url: url, isPrivate: self.isPrivate)
-            },
-            UIAction(title: "Open in private tab", image: UIImage(systemName: "eye.slash")) { [weak self] _ in
-                self?.owner?.newTab(url: url, isPrivate: true)
-            },
-            UIAction(title: "Download link", image: UIImage(systemName: "arrow.down.circle")) { [weak self] _ in self?.downloadLink(url) },
-            UIAction(title: "Save bookmark", image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.owner?.bookmark(url) },
-            UIAction(title: "Copy link", image: UIImage(systemName: "doc.on.doc")) { _ in UIPasteboard.general.url = url },
-            UIAction(title: "Share link", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in self?.shareLink(url) }
-        ])
+    private func presentLinkActions(for url: URL) {
+        // ASVS 2.2.1: keep the existing web-URL allowlist at the UI boundary.
+        guard BrowserModel.isWebURL(url), var presenter = web.window?.rootViewController else { return }
+        while let presented = presenter.presentedViewController { presenter = presented }
+        guard !(presenter is UIAlertController), !presenter.isBeingDismissed else { return }
+        let sheet = UIAlertController(title: "Link actions", message: url.host, preferredStyle: .actionSheet)
+        func add(_ title: String, action: @escaping () -> Void) {
+            sheet.addAction(UIAlertAction(title: title, style: .default) { [weak sheet] _ in
+                // Finish dismissal before replacing the web view or sharing.
+                if let sheet, sheet.presentingViewController?.presentedViewController === sheet {
+                    sheet.dismiss(animated: true, completion: action)
+                } else { action() }
+            })
+        }
+        add("Open in new tab") { [weak self] in
+            guard let self else { return }
+            self.owner?.newTab(url: url, isPrivate: self.isPrivate)
+        }
+        add("Open in private tab") { [weak self] in self?.owner?.newTab(url: url, isPrivate: true) }
+        add("Download link") { [weak self] in self?.downloadLink(url) }
+        add("Save bookmark") { [weak self] in self?.owner?.bookmark(url) }
+        add("Copy link") { UIPasteboard.general.url = url }
+        add("Share link") { [weak self] in self?.shareLink(url) }
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sheet.popoverPresentationController?.sourceView = web
+        sheet.popoverPresentationController?.sourceRect = CGRect(x: web.bounds.midX, y: web.bounds.midY, width: 1, height: 1)
+        presenter.present(sheet, animated: true)
     }
     private func shareLink(_ url: URL) {
         guard var controller = web.window?.rootViewController else { return }

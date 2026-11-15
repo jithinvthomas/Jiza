@@ -198,13 +198,12 @@ extension MusicPlayerUITests {
             action.exists && action.isHittable
         }, object: nil)
         guard XCTWaiter.wait(for: [ready], timeout: 5) == .completed else {
+            capture(app, name: "Link action not hittable - \(title)")
             XCTFail("Link action is not hittable: \(title)", file: file, line: line)
             return false
         }
-        // Keep touch duration explicit and verify menu dismissal separately from
-        // the page/tab assertions. This is a gesture mitigation, not proof of the
-        // underlying cause of intermittent native-menu interaction failures.
-        action.press(forDuration: 0.15)
+        // Verify action-sheet dismissal before interacting with the page again.
+        action.tap()
         let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             !action.exists
         }, object: nil)
