@@ -15,6 +15,11 @@ struct BrowserSession: Codable {
     var selected: Int
 }
 
+struct BrowserLinkTarget {
+    let url: URL
+    let tab: BrowserTab
+}
+
 @MainActor
 final class BrowserModel: ObservableObject {
     @Published var tabs: [BrowserTab] = []
@@ -25,6 +30,7 @@ final class BrowserModel: ObservableObject {
     @Published var history: [BrowserPage] = []
     @Published var error: String?
     @Published var downloadNotice = 0
+    @Published var linkActionTarget: BrowserLinkTarget?
     var automaticallyDownloadFiles: Bool {
         get { defaults.object(forKey: "jizaAutoDownloads") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "jizaAutoDownloads"); objectWillChange.send() }

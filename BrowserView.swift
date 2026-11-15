@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
+import UIKit
 
 struct BrowserView: View {
     @EnvironmentObject private var security: AppSecurity
@@ -8,6 +9,7 @@ struct BrowserView: View {
     @State private var media: [BrowserMediaLink] = []
     @State private var address = ""
     @State private var panel: BrowserPanel?
+    @State private var pendingLinkAction: (action: BrowserLinkAction, target: BrowserLinkTarget)?
     @State private var find = ""
     @State private var showFind = false
     @State private var findResult = ""
@@ -30,8 +32,11 @@ struct BrowserView: View {
         .onChange(of: browser.selected?.web.url) { _ in if !addressFocused { syncAddress() } }
         .onAppear { syncAddress(); security.browserVisible = true }
         .onDisappear { security.leaveBrowser() }
-        .onReceive(browser.downloads.$items.dropFirst()) { items in if items.first?.active == true { panel = .downloads } }
-        .sheet(item: $panel) { selectedPanel in
+        .onReceive(browser.downloads.$items.dropFirst()) { items in
+            if items.first?.active == true && panel == nil && pendingLinkAction == nil { panel = .downloads }
+        }
+        .onReceive(browser.$linkActionTarget) { target in if target != nil { panel = .link } }
+        .sheet(item: $panel, onDismiss: finishPanelDismissal) { selectedPanel in
             NavigationStack {
                 panelContent(selectedPanel)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { panel = nil } } }
@@ -140,6 +145,7 @@ struct BrowserView: View {
         case .data: BrowserDataView()
         case .protection: BrowserProtectionView(protection: browser.protection)
         case .locks: SecuritySettingsView()
+        case .link: linkActionsPanel
         case .media:
             List {
                 if media.isEmpty { Text("No direct media files found. Encrypted video, segmented streams and media inside other frames may not expose a downloadable file.").foregroundStyle(.secondary) }
@@ -149,6 +155,39 @@ struct BrowserView: View {
                     }
                 }
             }.navigationTitle("Page media")
+        }
+    }
+    private var linkActionsPanel: some View {
+        List {
+            if let target = browser.linkActionTarget {
+                Section {
+                    Text(target.url.absoluteString).font(.footnote).foregroundStyle(.secondary).lineLimit(3)
+                }
+                Section {
+                    ForEach(BrowserLinkAction.allCases, id: \.self) { action in
+                        Button(action.rawValue) {
+                            pendingLinkAction = (action, target)
+                            panel = nil
+                        }
+                    }
+                }
+            }
+        }.navigationTitle("Link actions").presentationDetents([.large])
+    }
+    private func finishPanelDismissal() {
+        // Consume once, after SwiftUI has finished dismissing the action sheet.
+        let pending = pendingLinkAction
+        pendingLinkAction = nil
+        browser.linkActionTarget = nil
+        guard let pending else { return }
+        let target = pending.target
+        switch pending.action {
+        case .newTab: browser.newTab(url: target.url, isPrivate: target.tab.isPrivate)
+        case .privateTab: browser.newTab(url: target.url, isPrivate: true)
+        case .download: target.tab.downloadLink(target.url)
+        case .bookmark: browser.bookmark(target.url)
+        case .copy: UIPasteboard.general.url = target.url
+        case .share: target.tab.shareLink(target.url)
         }
     }
     private func go() { addressFocused = false; browser.navigate(address) }
@@ -186,7 +225,15 @@ struct BrowserView: View {
         BrowserPagesView(browser: browser, historyMode: history) { url in browser.navigate(url.absoluteString); panel = nil }
     }
 }
-private enum BrowserPanel: String, Identifiable { case tabs, bookmarks, history, downloads, data, protection, locks, media; var id: String { rawValue } }
+private enum BrowserPanel: String, Identifiable { case tabs, bookmarks, history, downloads, data, protection, locks, media, link; var id: String { rawValue } }
+private enum BrowserLinkAction: String, CaseIterable, Hashable {
+    case newTab = "Open in new tab"
+    case privateTab = "Open in private tab"
+    case download = "Download link"
+    case bookmark = "Save bookmark"
+    case copy = "Copy link"
+    case share = "Share link"
+}
 
 private struct BrowserPageView: View {
     @ObservedObject var tab: BrowserTab

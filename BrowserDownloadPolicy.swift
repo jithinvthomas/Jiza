@@ -95,41 +95,11 @@ extension BrowserTab {
     }
     private func presentLinkActions(for url: URL) {
         // ASVS 2.2.1: keep the existing web-URL allowlist at the UI boundary.
-        guard BrowserModel.isWebURL(url), var presenter = web.window?.rootViewController else { return }
-        while let presented = presenter.presentedViewController { presenter = presented }
-        guard !(presenter is UIAlertController), !presenter.isBeingDismissed else { return }
-        let sheet = UIAlertController(title: "Link actions", message: url.host, preferredStyle: .actionSheet)
-        func add(_ title: String, action: @escaping () -> Void) {
-            sheet.addAction(UIAlertAction(title: title, style: .default) { [weak sheet] _ in
-                // UIKit dismisses an alert action itself. A second dismiss can
-                // lose its completion during that transition on newer iOS.
-                var performed = false
-                let perform = {
-                    guard !performed else { return }
-                    performed = true
-                    action()
-                }
-                if let coordinator = sheet?.transitionCoordinator,
-                   coordinator.animate(alongsideTransition: nil, completion: { _ in perform() }) { return }
-                perform()
-            })
-        }
-        add("Open in new tab") { [weak self] in
-            guard let self else { return }
-            self.owner?.newTab(url: url, isPrivate: self.isPrivate)
-        }
-        add("Open in private tab") { [weak self] in self?.owner?.newTab(url: url, isPrivate: true) }
-        add("Download link") { [weak self] in self?.downloadLink(url) }
-        add("Save bookmark") { [weak self] in self?.owner?.bookmark(url) }
-        add("Copy link") { UIPasteboard.general.url = url }
-        add("Share link") { [weak self] in self?.shareLink(url) }
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        sheet.popoverPresentationController?.sourceView = web
-        sheet.popoverPresentationController?.sourceRect = CGRect(x: web.bounds.midX, y: web.bounds.midY, width: 1, height: 1)
-        presenter.present(sheet, animated: true)
+        guard BrowserModel.isWebURL(url), let owner, owner.selectedID == id else { return }
+        owner.linkActionTarget = BrowserLinkTarget(url: url, tab: self)
     }
-    private func shareLink(_ url: URL) {
-        guard var controller = web.window?.rootViewController else { return }
+    func shareLink(_ url: URL) {
+        guard BrowserModel.isWebURL(url), var controller = web.window?.rootViewController else { return }
         while let presented = controller.presentedViewController { controller = presented }
         let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         sheet.popoverPresentationController?.sourceView = web
