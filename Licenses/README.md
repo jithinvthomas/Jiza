@@ -1,4 +1,4 @@
-ï»¿# VideoLAN libraries
+﻿# VideoLAN libraries
 Jiza uses unmodified MobileVLCKit 3.7.3 from the official CocoaPods spec, with the LGPL-2.1-or-later license in VLCKit-LGPL-2.1.txt.
 
 Source and library build instructions: https://code.videolan.org/videolan/VLCKit

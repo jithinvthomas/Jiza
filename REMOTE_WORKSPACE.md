@@ -14,7 +14,7 @@ The project uses the idea of reusable, theme-driven SwiftUI components populariz
 - **Authentication:** delegated to the gateway / Guacamole. No SSH private keys or RDP passwords are bundled in this app.
 - **Session privacy:** remote connections use isolated, in-memory website data. Refresh keeps the current login; leaving a connection clears it. Redirects must use HTTPS. Saved gateway addresses reject embedded passwords, queries and fragments; log in through the gateway instead of saving token-bearing links.
 
-## Required server deployment â€” not performed by this repository
+## Required server deployment — not performed by this repository
 
 1. On Oracle Ubuntu, check OS, disk space and available memory before installing a graphical desktop or Docker. Small Oracle instances may not be suitable for both Guacamole and XFCE.
 2. Install and authenticate [Tailscale](https://tailscale.com/download/linux) on Oracle Ubuntu, [Windows](https://tailscale.com/download/windows) and the iPhone. Keep all hosts in your authorized private tailnet.
