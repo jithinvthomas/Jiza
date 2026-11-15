@@ -76,6 +76,9 @@ jobs:
           done
           curl --fail --silent http://127.0.0.1:8765/page >/dev/null
           xcodebuild test -workspace InteraMusicPlayer.xcworkspace -scheme InteraMusicPlayer -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+          if [ "$NATIVE_GLASS" = "true" ]; then
+            xcodebuild test -workspace InteraMusicPlayer.xcworkspace -scheme InteraMusicPlayer -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:InteraMusicPlayerUITests/MusicPlayerUITests/testBrowserPullRefreshAndLinkActions -test-iterations 3 -resultBundlePath BrowserInteractions.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+          fi
       - name: Export simulator screenshots
         if: always()
         run: python3 export_test_images.py
@@ -93,6 +96,7 @@ jobs:
           name: iPhone-test-results-${{ matrix.runner }}
           path: |
             TestResults.xcresult
+            BrowserInteractions.xcresult
             test-images
             Podfile.lock
             browser-test-server.log

@@ -172,12 +172,38 @@ extension MusicPlayerUITests {
             XCTAssertTrue(app.buttons[title].waitForExistence(timeout: 5), title)
         }
         capture(app, name: "Jiza Link Actions")
-        app.buttons["Save bookmark"].tap()
+        guard selectLinkAction("Save bookmark", in: app) else { return }
         link.press(forDuration: 1)
-        app.buttons["Open in new tab"].tap()
+        guard selectLinkAction("Open in new tab", in: app) else { return }
         XCTAssertTrue(app.webViews.staticTexts["Browser fixture"].waitForExistence(timeout: 30))
         app.buttons["Tabs"].tap()
+        XCTAssertTrue(app.buttons["New tab"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons.matching(identifier: "Close tab").count >= 2)
+    }
+
+    private func selectLinkAction(_ title: String, in app: XCUIApplication,
+                                  file: StaticString = #filePath, line: UInt = #line) -> Bool {
+        let action = app.buttons[title]
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            action.exists && action.isHittable
+        }, object: nil)
+        guard XCTWaiter.wait(for: [ready], timeout: 5) == .completed else {
+            XCTFail("Link action is not hittable: \(title)", file: file, line: line)
+            return false
+        }
+        // The failing iOS 26 recording showed the synthesized 50 ms tap landing
+        // inside the menu row without selecting it. Use a short, explicit press,
+        // and prove the native menu dismissed before performing another gesture.
+        action.press(forDuration: 0.15)
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !action.exists
+        }, object: nil)
+        guard XCTWaiter.wait(for: [dismissed], timeout: 10) == .completed else {
+            capture(app, name: "Link action did not dismiss - \(title)")
+            XCTFail("Link action did not dismiss the menu: \(title)", file: file, line: line)
+            return false
+        }
+        return true
     }
 
     func testBrowserTabsAndDownloadSettings() {
