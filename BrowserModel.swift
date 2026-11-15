@@ -133,7 +133,7 @@ final class BrowserModel: ObservableObject {
 }
 
 @MainActor
-final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDelegate, WKUIDelegate {
+final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDelegate, WKUIDelegate, UIGestureRecognizerDelegate {
     let id = UUID()
     let isPrivate: Bool
     let web: WKWebView
@@ -147,6 +147,8 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
     var popupParentID: UUID?
     private var committed = false
     private var observations: [NSKeyValueObservation] = []
+    var pressedLink: URL?
+    var linkPressRequest = UUID()
     init(configuration: WKWebViewConfiguration, isPrivate: Bool, owner: BrowserModel) {
         self.isPrivate = isPrivate
         self.owner = owner
@@ -155,7 +157,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.navigationDelegate = self
         web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
-        web.allowsLinkPreview = true
+        web.allowsLinkPreview = false
+        let linkPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLinkPress(_:)))
+        linkPress.minimumPressDuration = 0.45
+        linkPress.delegate = self
+        web.addGestureRecognizer(linkPress)
         let refresh = UIRefreshControl()
         refresh.accessibilityLabel = "Refresh page"
         refresh.addTarget(self, action: #selector(refreshPage), for: .valueChanged)
@@ -187,7 +193,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         pageError = nil
         if web.reload() == nil { web.scrollView.refreshControl?.endRefreshing() }
     }
-    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { pageError = nil }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        pageError = nil
+        pressedLink = nil
+        linkPressRequest = UUID()
+    }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { committed = true; owner?.visit(self) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { report(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { report(error) }

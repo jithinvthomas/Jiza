@@ -36,11 +36,46 @@ extension BrowserTab {
             return BrowserMediaLink(url: url, label: row["label"] ?? url.lastPathComponent)
         }
     }
-    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-        guard let url = elementInfo.linkURL, BrowserModel.isWebURL(url) else { completionHandler(nil); return }
-        // An explicit empty configuration prevents WebKit's default link-preview
-        // fallback. Returning nil can put that preview above the action sheet.
-        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) })
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        pressedLink = nil
+        let request = UUID()
+        linkPressRequest = request
+        let point = touch.location(in: web)
+        let pageURL = web.url
+        // Resolve at touch-down so non-link presses can keep native text selection.
+        // Arguments are values, never executable page text. The isolated world
+        // prevents a website replacing the DOM APIs used by this lookup.
+        let script = """
+        const viewport = window.visualViewport;
+        const px = (viewport?.offsetLeft || 0) + x * (viewport?.width || innerWidth) / width;
+        const py = (viewport?.offsetTop || 0) + y * (viewport?.height || innerHeight) / height;
+        const link = document.elementFromPoint(px, py)?.closest('a[href]');
+        return link?.href || '';
+        """
+        web.callAsyncJavaScript(script, arguments: ["x": point.x, "y": point.y,
+            "width": max(web.bounds.width, 1), "height": max(web.bounds.height, 1)],
+            in: nil, in: .defaultClient) { [weak self] result in
+                guard let self, self.linkPressRequest == request, self.web.url == pageURL,
+                      case .success(let value) = result, let text = value as? String,
+                      let url = URL(string: text), BrowserModel.isWebURL(url) else { return }
+                self.pressedLink = url
+            }
+        return true
+    }
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        pressedLink != nil
+    }
+    @objc func handleLinkPress(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .cancelled || gesture.state == .failed {
+            pressedLink = nil
+            linkPressRequest = UUID()
+            return
+        }
+        // Wait for lift-off: presenting during the touch allows WebKit's link
+        // activation/preview gestures to race with the action sheet.
+        guard gesture.state == .ended, let url = pressedLink else { return }
+        pressedLink = nil
+        linkPressRequest = UUID()
         DispatchQueue.main.async { [weak self] in self?.presentLinkActions(for: url) }
     }
     private func presentLinkActions(for url: URL) {
