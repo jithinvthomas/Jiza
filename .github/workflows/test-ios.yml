@@ -90,6 +90,10 @@ jobs:
               || xcrun xcresulttool get object --legacy --format json --path TestResults.xcresult > test-summary.json
             cat test-summary.json
           fi
+          if [ -d BrowserInteractions.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path BrowserInteractions.xcresult > browser-interactions-summary.json
+            cat browser-interactions-summary.json
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -101,3 +105,4 @@ jobs:
             Podfile.lock
             browser-test-server.log
             test-summary.json
+            browser-interactions-summary.json

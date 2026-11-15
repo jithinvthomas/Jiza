@@ -166,6 +166,12 @@ extension MusicPlayerUITests {
             pageLoad.exists && pageLoad.label != previousLoad
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [reloaded], timeout: 30), .completed)
+        let tabsButton = app.buttons["Tabs"]
+        let countText = tabsButton.value as? String ?? ""
+        guard let initialTabCount = Int(countText.split(separator: " ").first ?? "") else {
+            XCTFail("Missing initial tab count: \(countText)")
+            return
+        }
         let link = app.webViews.links["Example page"]
         link.press(forDuration: 1)
         for title in ["Open in new tab", "Open in private tab", "Download link", "Save bookmark", "Copy link", "Share link"] {
@@ -175,6 +181,10 @@ extension MusicPlayerUITests {
         guard selectLinkAction("Save bookmark", in: app) else { return }
         link.press(forDuration: 1)
         guard selectLinkAction("Open in new tab", in: app) else { return }
+        let tabAdded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            tabsButton.value as? String == "\(initialTabCount + 1) open tabs"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [tabAdded], timeout: 5), .completed)
         XCTAssertTrue(app.webViews.staticTexts["Browser fixture"].waitForExistence(timeout: 30))
         app.buttons["Tabs"].tap()
         XCTAssertTrue(app.buttons["New tab"].waitForExistence(timeout: 5))
@@ -191,9 +201,9 @@ extension MusicPlayerUITests {
             XCTFail("Link action is not hittable: \(title)", file: file, line: line)
             return false
         }
-        // The failing iOS 26 recording showed the synthesized 50 ms tap landing
-        // inside the menu row without selecting it. Use a short, explicit press,
-        // and prove the native menu dismissed before performing another gesture.
+        // Keep touch duration explicit and verify menu dismissal separately from
+        // the page/tab assertions. This is a gesture mitigation, not proof of the
+        // underlying cause of intermittent native-menu interaction failures.
         action.press(forDuration: 0.15)
         let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             !action.exists
