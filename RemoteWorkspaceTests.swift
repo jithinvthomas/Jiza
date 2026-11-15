@@ -1,5 +1,5 @@
 import XCTest
-@testable import InteraMusic
+@testable import Jiza
 
 final class RemoteWorkspaceTests: XCTestCase {
     func testSavedGatewaysRequireHTTPSAndExcludeCredentialsAndTokens() {

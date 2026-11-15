@@ -2,7 +2,7 @@ import XCTest
 import Combine
 import MediaPlayer
 import AVFoundation
-@testable import InteraMusic
+@testable import Jiza
 
 @MainActor
 final class AudioPlayerModelTests: XCTestCase {
@@ -130,7 +130,7 @@ final class AudioPlayerModelTests: XCTestCase {
         XCTAssertEqual(player.handleRemote(.next), .noSuchContent)
     }
     private func isolatedPlayer() -> (AudioPlayerModel, UserDefaults) {
-        let defaults = UserDefaults(suiteName: "InteraTests-\(UUID().uuidString)")!
+        let defaults = UserDefaults(suiteName: "JizaTests-\(UUID().uuidString)")!
         return (AudioPlayerModel(defaults: defaults), defaults)
     }
 

@@ -57,5 +57,5 @@ for action in root.get("actions", {}).get("_values", []):
                                    "--type", "directory", "--output-path", str(target)])
         if exported.returncode == 0:
             for file in target.rglob("*"):
-                if file.suffix in (".ips", ".crash") and "InteraMusic" in file.name:
+                if file.suffix in (".ips", ".crash") and "Jiza" in file.name:
                     shutil.copy2(file, output / file.name)

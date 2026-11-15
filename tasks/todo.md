@@ -16,7 +16,7 @@ Dependencies: none. Likely files: ContentView.swift, MusicPlayerUITests.swift, p
 
 Verification: playback/handoff tests, existing CI, real-device sample videos and interruption checks.
 Evidence: commit c61560e passed both simulator jobs in run 37004436673. Tests load and seek an H.264/AAC sample, check music/video handoff, invalid files and close-during-load. Device checks remain pending.
-Dependencies: 1. Likely files: new VideoPlayerModel.swift and VideoPlayerView.swift, InteraMusicPlayerApp.swift, AudioPlayerModel.swift, new VideoPlayerModelTests.swift. Scope: medium.
+Dependencies: 1. Likely files: new VideoPlayerModel.swift and VideoPlayerView.swift, JizaApp.swift, AudioPlayerModel.swift, new VideoPlayerModelTests.swift. Scope: medium.
 
 ## Checkpoint: playback foundation
 - [ ] Music and video work independently and never overlap.
@@ -28,7 +28,7 @@ Dependencies: 1. Likely files: new VideoPlayerModel.swift and VideoPlayerView.sw
 - [ ] Search and filter Music/Videos in a shared Library, with a music mini-player while browsing.
 
 Verification: folder/filter tests, large-folder responsiveness, relaunch/provider checks and visual review.
-Dependencies: 2. Likely files: new MediaLibraryModel.swift, new MediaLibraryTests.swift, ContentView.swift, VideoPlayerModel.swift, InteraMusicPlayerApp.swift. Scope: medium; split model and UI into separate commits if necessary.
+Dependencies: 2. Likely files: new MediaLibraryModel.swift, new MediaLibraryTests.swift, ContentView.swift, VideoPlayerModel.swift, JizaApp.swift. Scope: medium; split model and UI into separate commits if necessary.
 
 ## 4. Resume videos
 - [ ] Save position across termination/relaunch using a stable file identity.

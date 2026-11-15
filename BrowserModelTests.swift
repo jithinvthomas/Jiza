@@ -1,6 +1,6 @@
 import XCTest
 import WebKit
-@testable import InteraMusic
+@testable import Jiza
 
 @MainActor
 final class BrowserModelTests: XCTestCase {

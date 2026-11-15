@@ -2,7 +2,7 @@ import XCTest
 import AVFoundation
 import Combine
 import UIKit
-@testable import InteraMusic
+@testable import Jiza
 
 @MainActor
 final class VideoPlayerModelTests: XCTestCase {
