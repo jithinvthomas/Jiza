@@ -205,15 +205,21 @@ extension MusicPlayerUITests {
                                   file: StaticString = #filePath, line: UInt = #line) -> Bool {
         let action = app.buttons[title]
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            action.exists && action.isHittable
+            guard action.exists else { return false }
+            let frame = action.frame
+            return !frame.isEmpty && app.frame.contains(CGPoint(x: frame.midX, y: frame.midY))
         }, object: nil)
         guard XCTWaiter.wait(for: [ready], timeout: 5) == .completed else {
-            capture(app, name: "Link action not hittable - \(title)")
-            XCTFail("Link action is not hittable: \(title)", file: file, line: line)
+            capture(app, name: "Link action not visible - \(title)")
+            XCTFail("Link action is not visible: \(title)", file: file, line: line)
             return false
         }
-        // Verify action-sheet dismissal before interacting with the page again.
-        action.tap()
+        // iOS 26 can vend an invalid accessibility activation point for a
+        // visible action. Tap its actual frame center and verify the outcome.
+        let frame = action.frame
+        let origin = app.frame.origin
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - origin.x, dy: frame.midY - origin.y)).tap()
         let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             !action.exists
         }, object: nil)

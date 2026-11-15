@@ -156,9 +156,6 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         super.init()
         web.navigationDelegate = self
         web.uiDelegate = self
-        // A new web process has no document tree to expose before its first
-        // commit. Keep native loading controls accessible during that startup.
-        web.accessibilityElementsHidden = true
         web.allowsBackForwardNavigationGestures = true
         web.allowsLinkPreview = false
         let linkPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLinkPress(_:)))
@@ -200,9 +197,6 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         pageError = nil
         pressedLink = nil
         linkPressRequest = UUID()
-    }
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        webView.accessibilityElementsHidden = false
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { committed = true; owner?.visit(self) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { report(error) }

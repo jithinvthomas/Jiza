@@ -101,10 +101,17 @@ extension BrowserTab {
         let sheet = UIAlertController(title: "Link actions", message: url.host, preferredStyle: .actionSheet)
         func add(_ title: String, action: @escaping () -> Void) {
             sheet.addAction(UIAlertAction(title: title, style: .default) { [weak sheet] _ in
-                // Finish dismissal before replacing the web view or sharing.
-                if let sheet, sheet.presentingViewController?.presentedViewController === sheet {
-                    sheet.dismiss(animated: true, completion: action)
-                } else { action() }
+                // UIKit dismisses an alert action itself. A second dismiss can
+                // lose its completion during that transition on newer iOS.
+                var performed = false
+                let perform = {
+                    guard !performed else { return }
+                    performed = true
+                    action()
+                }
+                if let coordinator = sheet?.transitionCoordinator,
+                   coordinator.animate(alongsideTransition: nil, completion: { _ in perform() }) { return }
+                perform()
             })
         }
         add("Open in new tab") { [weak self] in
