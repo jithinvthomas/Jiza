@@ -1,16 +1,16 @@
-name: InteraMusicPlayer
+name: Jiza
 
 options:
   deploymentTarget:
     iOS: 16.0
-  bundleIdPrefix: com.interaauditsolutions
+  bundleIdPrefix: com.jiza
 
 settings:
   base:
     SWIFT_VERSION: 5.0
 
 targets:
-  InteraMusicPlayer:
+  Jiza:
     type: application
     platform: iOS
     deploymentTarget: 16.0
@@ -23,6 +23,10 @@ targets:
       - ContentView.swift
       - JizaHomeView.swift
       - TradingDashboardView.swift
+      - PocketTerminalView.swift
+      - JizaRemoteDesktopView.swift
+      - JizaWorkspaceDesign.swift
+      - RemoteWorkspaceSession.swift
       - SharedInbox.swift
       - TorrentModel.swift
       - JizaDesign.swift
@@ -35,7 +39,7 @@ targets:
         buildPhase: resources
       - AppSecurity.swift
       - SecurityViews.swift
-      - InteraMusicPlayerApp.swift
+      - JizaApp.swift
       - Assets.xcassets
       - path: Licenses
         buildPhase: resources
@@ -80,8 +84,8 @@ targets:
             CFBundleURLSchemes: [magnet]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.interaauditsolutions.music
-        PRODUCT_NAME: InteraMusic
+        PRODUCT_BUNDLE_IDENTIFIER: com.jiza.app
+        PRODUCT_NAME: Jiza
         SWIFT_OBJC_BRIDGING_HEADER: TorrentNative/JizaTorrent.h
         LIBRARY_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/NativeBuild/$(PLATFORM_NAME)"
         OTHER_LDFLAGS: "$(inherited) -lJizaTorrentCombined -lc++ -lz -framework SystemConfiguration -framework Security"
@@ -103,7 +107,7 @@ targets:
       - SharedInbox.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.interaauditsolutions.music.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.jiza.app.share
         CODE_SIGN_ENTITLEMENTS: Jiza.entitlements
         APPLICATION_EXTENSION_API_ONLY: YES
     info:
@@ -121,7 +125,7 @@ targets:
               NSExtensionActivationSupportsWebURLWithMaxCount: 20
               NSExtensionActivationSupportsText: true
 
-  InteraMusicPlayerTests:
+  JizaTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: 16.0
@@ -130,36 +134,37 @@ targets:
       - VideoPlayerModelTests.swift
       - BrowserModelTests.swift
       - TradingDashboardTests.swift
+      - RemoteWorkspaceTests.swift
       - TorrentTests.swift
       - AppSecurityTests.swift
       - path: TestFixtures
         buildPhase: resources
     dependencies:
-      - target: InteraMusicPlayer
+      - target: Jiza
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/InteraMusic.app/InteraMusic"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Jiza.app/Jiza"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
-  InteraMusicPlayerUITests:
+  JizaUITests:
     type: bundle.ui-testing
     platform: iOS
     deploymentTarget: 16.0
     sources:
       - MusicPlayerUITests.swift
     dependencies:
-      - target: InteraMusicPlayer
+      - target: Jiza
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  InteraMusicPlayer:
+  Jiza:
     build:
       targets:
-        InteraMusicPlayer: all
+        Jiza: all
     test:
       targets:
-        - InteraMusicPlayerTests
-        - InteraMusicPlayerUITests
+        - JizaTests
+        - JizaUITests

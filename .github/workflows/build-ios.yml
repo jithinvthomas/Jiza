@@ -5,17 +5,29 @@ on:
   push:
     branches:
       - main
+      - finish/jiza-all-in-one
 
 permissions:
   contents: read
 
+concurrency:
+  group: jiza-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  verify:
+    uses: ./.github/workflows/test-ios.yml
+
   build:
+    needs: verify
     runs-on: macos-26
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Select release Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -25,7 +37,7 @@ jobs:
 
       - name: Normalize project format
         run: |
-          sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' InteraMusicPlayer.xcodeproj/project.pbxproj
+          sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' Jiza.xcodeproj/project.pbxproj
 
       - name: Build unsigned iOS archive
         # Dependencies must be integrated before using the workspace.
@@ -36,11 +48,11 @@ jobs:
       - name: Archive app
         run: |
           xcodebuild archive \
-            -workspace InteraMusicPlayer.xcworkspace \
-            -scheme InteraMusicPlayer \
+            -workspace Jiza.xcworkspace \
+            -scheme Jiza \
             -sdk iphoneos \
             -configuration Release \
-            -archivePath "$PWD/build/InteraMusicPlayer.xcarchive" \
+            -archivePath "$PWD/build/Jiza.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
@@ -48,13 +60,13 @@ jobs:
       - name: Package unsigned IPA
         run: |
           mkdir -p build/Payload
-          cp -R build/InteraMusicPlayer.xcarchive/Products/Applications/InteraMusic.app build/Payload/
+          cp -R build/Jiza.xcarchive/Products/Applications/Jiza.app build/Payload/
           cd build
-          /usr/bin/zip -r InteraMusicPlayer-unsigned.ipa Payload
+          /usr/bin/zip -r Jiza-unsigned.ipa Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: InteraMusicPlayer-IPA
-          path: build/InteraMusicPlayer-unsigned.ipa
+          name: Jiza-IPA
+          path: build/Jiza-unsigned.ipa
           if-no-files-found: error

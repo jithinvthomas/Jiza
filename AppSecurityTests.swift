@@ -1,7 +1,7 @@
 import XCTest
 import UIKit
 import Security
-@testable import InteraMusic
+@testable import Jiza
 
 private final class MemoryLockStorage: LockStorage {
     var value = LockRecord()

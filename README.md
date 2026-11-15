@@ -1,5 +1,7 @@
 # Jiza
 
+Jiza is an independent all-in-one app. Its iOS bundle identifier is `com.jiza.app`, with Share extension `com.jiza.app.share` and App Group `group.com.jiza.app`.
+
 ## iPhone fixes
 - The header menu offers Choose folder, Open audio file and Open video file.
 - The background fills the display; the menu respects the safe area and content scrolls on short screens.
@@ -12,7 +14,7 @@
 ## Verify before packaging
 On a Mac with Xcode and XcodeGen:
 1. Run `xcodegen generate`.
-2. Open `InteraMusicPlayer.xcodeproj` and choose an iPhone simulator.
+2. Open `Jiza.xcodeproj` and choose an iPhone simulator.
 3. Run Product > Test. Test on a small iPhone and a notched iPhone.
 4. On a signed development build on an iPhone, open the top-left menu > Choose folder.
 5. Select a folder in Files with at least two downloaded songs. Play both, skip tracks, pause/resume, and change folders.

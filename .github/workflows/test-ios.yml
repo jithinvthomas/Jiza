@@ -1,26 +1,50 @@
 name: Test Jiza iPhone app
 on:
+  workflow_call:
+  pull_request:
   push:
     branches:
+      - main
       - fix/iphone-layout-folder-picker
       - feature/jiza-home-hub
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: jiza-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   simulator:
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-14, macos-26]
+        runner: [macos-15, macos-26]
     runs-on: ${{ matrix.runner }}
     env:
       NATIVE_GLASS: ${{ matrix.runner == 'macos-26' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select native Xcode
+        if: matrix.runner == 'macos-26'
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Select compatibility Xcode
+        if: matrix.runner == 'macos-15'
+        # Xcode 16.4 + iOS 18.5 can fail at launch with missing libswiftWebKit.
+        # https://developer.apple.com/forums/thread/785964
+        run: sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
+      - name: Install matching compatibility simulator runtime
+        if: matrix.runner == 'macos-15'
+        run: |
+          if ! xcrun simctl list runtimes -j | python3 -c 'import json,sys; sys.exit(0 if any(r.get("isAvailable") and r["identifier"].endswith("iOS-18-4") for r in json.load(sys.stdin)["runtimes"]) else 1)'; then
+            xcodebuild -downloadPlatform iOS -buildVersion 18.4
+          fi
+          xcrun simctl list runtimes
       - name: Check Xcode and SDK
         run: |
           xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          xcrun simctl list runtimes
           if [ "$NATIVE_GLASS" = "true" ]; then
             SDK_MAJOR=$(xcrun --sdk iphonesimulator --show-sdk-version | cut -d. -f1)
             test "$SDK_MAJOR" -ge 26
@@ -31,12 +55,20 @@ jobs:
         run: |
           bash TorrentNative/build.sh iphonesimulator "$(uname -m)"
           xcodegen generate
-          sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' InteraMusicPlayer.xcodeproj/project.pbxproj
-      - name: Select available iPhone simulator
+          sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' Jiza.xcodeproj/project.pbxproj
+      - name: Create matching iPhone 14 Pro simulator
         # CocoaPods provides the official checksum-verified VLCKit XCFramework.
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,os,sys; d=json.load(sys.stdin); native=os.environ["NATIVE_GLASS"]=="true"; print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k and (not native or "iOS-26" in k) for v in vs if "iPhone" in v["name"]))')
+          if [ "$NATIVE_GLASS" = "true" ]; then
+            SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+            RUNTIME_ID=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; sdk=".".join(sys.argv[1].split(".")[:2]); print(next(r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and "SimRuntime.iOS-" in r["identifier"] and ".".join(r["version"].split(".")[:2]) == sdk))' "$SDK_VERSION")
+          else
+            RUNTIME_ID=com.apple.CoreSimulator.SimRuntime.iOS-18-4
+          fi
+          DEVICE_ID=$(xcrun simctl create "Jiza iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro "$RUNTIME_ID")
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
       - name: Install playback framework
         run: |
           brew list cocoapods >/dev/null 2>&1 || brew install cocoapods
@@ -52,16 +84,34 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:8765/page >/dev/null
-          xcodebuild test -workspace InteraMusicPlayer.xcworkspace -scheme InteraMusicPlayer -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+          if [ "$NATIVE_GLASS" = "true" ]; then
+            xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:JizaUITests/MusicPlayerUITests/testBrowserPullRefreshAndLinkActions -test-iterations 3 -run-tests-until-failure -resultBundlePath BrowserInteractions.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+          fi
+          xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
       - name: Export simulator screenshots
         if: always()
         run: python3 export_test_images.py
+      - name: Export readable test results
+        if: always()
+        run: |
+          if [ -d TestResults.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path TestResults.xcresult > test-summary.json \
+              || xcrun xcresulttool get object --legacy --format json --path TestResults.xcresult > test-summary.json
+            cat test-summary.json
+          fi
+          if [ -d BrowserInteractions.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path BrowserInteractions.xcresult > browser-interactions-summary.json
+            cat browser-interactions-summary.json
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: iPhone-test-results-${{ matrix.runner }}
           path: |
             TestResults.xcresult
+            BrowserInteractions.xcresult
             test-images
             Podfile.lock
             browser-test-server.log
+            test-summary.json
+            browser-interactions-summary.json

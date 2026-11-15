@@ -26,6 +26,8 @@ struct JizaHomeView: View {
                         entry("Browser", detail: "Tabs & bookmarks")
                         entry("Downloader", detail: "Links & torrents", symbol: "arrow.down.circle.fill")
                         entry("Trading", detail: "Your workspace")
+                        entry("Terminal", detail: "Claude Code & Codex", symbol: "terminal.fill")
+                        entry("Desktop", detail: "Oracle & Windows", symbol: "desktopcomputer")
                     }
                     .modifier(JizaGlassGroup())
                 }
@@ -46,6 +48,8 @@ struct JizaHomeView: View {
                 case "Video": VideoLibraryView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
                 case "Browser": BrowserView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
                 case "Downloader": BrowserDownloadsView(downloads: browser.downloads).navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                case "Terminal": PocketTerminalView()
+                case "Desktop": JizaRemoteDesktopView()
                 default: TradingDashboardView().navigationTitle("").navigationBarTitleDisplayMode(.inline)
                 }
             }
@@ -85,6 +89,7 @@ struct JizaHomeView: View {
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .modifier(JizaSurface(interactive: true))
+            .contentShape(Rectangle())
         }
         .buttonStyle(JizaPressStyle())
         .accessibilityElement(children: .combine)

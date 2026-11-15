@@ -6,12 +6,14 @@ import shutil
 import tempfile
 
 result = "TestResults.xcresult"
+if not pathlib.Path(result).exists():
+    result = "BrowserInteractions.xcresult"
 output = pathlib.Path("test-images")
 output.mkdir(exist_ok=True)
 
-# Xcode 26 replaced the JSON object API with a direct attachment exporter.
+# Xcode 16 introduced the direct attachment exporter and deprecated the object API.
 xcode_major = int(subprocess.check_output(["xcodebuild", "-version"], text=True).splitlines()[0].split()[1].split(".")[0])
-if xcode_major >= 26:
+if xcode_major >= 16:
     subprocess.run(["xcrun", "xcresulttool", "export", "attachments",
                     "--path", result, "--output-path", str(output)], check=True)
     sys.exit(0)
@@ -57,5 +59,5 @@ for action in root.get("actions", {}).get("_values", []):
                                    "--type", "directory", "--output-path", str(target)])
         if exported.returncode == 0:
             for file in target.rglob("*"):
-                if file.suffix in (".ips", ".crash") and "InteraMusic" in file.name:
+                if file.suffix in (".ips", ".crash") and "Jiza" in file.name:
                     shutil.copy2(file, output / file.name)

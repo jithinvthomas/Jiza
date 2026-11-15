@@ -49,8 +49,13 @@ final class BrowserProtection: ObservableObject {
     private static func compiledRules() async throws -> WKContentRuleList {
         if let compilation { return try await compilation.value }
         let task = Task { @MainActor () throws -> WKContentRuleList in
-            let encoded = try rulesJSON()
-            let fingerprint = SHA256.hash(data: Data(encoded.utf8)).map { String(format: "%02x", $0) }.joined()
+            // Parsing, sorting and hashing the large bundled list must not block
+            // home-screen taps or WebKit navigation on the main actor.
+            let (encoded, fingerprint) = try await Task.detached(priority: .utility) {
+                let encoded = try rulesJSON()
+                let fingerprint = SHA256.hash(data: Data(encoded.utf8)).map { String(format: "%02x", $0) }.joined()
+                return (encoded, fingerprint)
+            }.value
             let identifier = "Jiza-EasyList-" + fingerprint
             return try await withCheckedThrowingContinuation { continuation in
                 guard let store = WKContentRuleListStore.default() else {

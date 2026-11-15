@@ -1,6 +1,36 @@
 import XCTest
 
 final class MusicPlayerUITests: XCTestCase {
+    func testRemoteWorkspaceIsPartOfTheAllInOneHome() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-oracleTerminalGatewayURL", "http://invalid.example", "-pocketTerminalGatewayURL", "http://invalid.example", "-jizaRemoteGatewayURL", "http://invalid.example"]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        let terminal = app.buttons["homeTerminal"]
+        for _ in 0..<8 { if terminal.exists && terminal.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(terminal.isHittable)
+        capture(app, name: "Jiza All In One Workspace Home")
+        terminal.tap()
+        XCTAssertTrue(app.buttons["terminalOracle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["terminalWindows"].exists)
+        capture(app, name: "Jiza Terminal Claude Code and Codex")
+        app.buttons["terminalOracle"].tap()
+        XCTAssertTrue(app.textFields["terminalGateway"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save Connection"].isEnabled)
+        app.buttons["Done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let desktop = app.buttons["homeDesktop"]
+        for _ in 0..<8 { if desktop.exists && desktop.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(desktop.isHittable)
+        desktop.tap()
+        XCTAssertTrue(app.buttons["desktopOracle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["desktopWindows"].exists)
+        capture(app, name: "Jiza Remote Desktop")
+        app.buttons["desktopOracle"].tap()
+        XCTAssertTrue(app.textFields["desktopGateway"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save Connections"].isEnabled)
+    }
+
     func testLandscapeAndReturnToPortrait() {
         let app = XCUIApplication()
         XCUIDevice.shared.orientation = .portrait
@@ -115,8 +145,12 @@ extension MusicPlayerUITests {
 
     func testBrowserPullRefreshAndLinkActions() {
         let app = XCUIApplication()
+        // Each repetition starts with one tab, not every prior live WebKit page.
+        app.launchArguments = ["-jizaBrowserSession", "{}"]
         app.launch()
-        app.buttons["homeBrowser"].tap()
+        let home = app.buttons["homeBrowser"]
+        XCTAssertTrue(home.waitForExistence(timeout: 10))
+        home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let address = app.textFields["webAddress"]
         XCTAssertTrue(address.waitForExistence(timeout: 10))
         address.tap()
@@ -136,18 +170,59 @@ extension MusicPlayerUITests {
             pageLoad.exists && pageLoad.label != previousLoad
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [reloaded], timeout: 30), .completed)
+        let tabsButton = app.buttons["Tabs"]
+        let countText = tabsButton.value as? String ?? ""
+        guard let initialTabCount = Int(countText.split(separator: " ").first ?? "") else {
+            XCTFail("Missing initial tab count: \(countText)")
+            return
+        }
         let link = app.webViews.links["Example page"]
         link.press(forDuration: 1)
         for title in ["Open in new tab", "Open in private tab", "Download link", "Save bookmark", "Copy link", "Share link"] {
             XCTAssertTrue(app.buttons[title].waitForExistence(timeout: 5), title)
         }
         capture(app, name: "Jiza Link Actions")
-        app.buttons["Save bookmark"].tap()
+        guard selectLinkAction("Save bookmark", in: app) else { return }
+        guard link.waitForExistence(timeout: 5) else {
+            XCTFail("Saving a bookmark must leave the source page open")
+            return
+        }
+        // The modal sheet hides background accessibility until dismissal.
+        XCTAssertTrue((address.value as? String)?.contains("/interactions") == true,
+                      "Link actions and bookmarking must not navigate the current tab")
         link.press(forDuration: 1)
-        app.buttons["Open in new tab"].tap()
+        guard selectLinkAction("Open in new tab", in: app) else { return }
+        let tabAdded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            tabsButton.value as? String == "\(initialTabCount + 1) open tabs"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [tabAdded], timeout: 5), .completed)
         XCTAssertTrue(app.webViews.staticTexts["Browser fixture"].waitForExistence(timeout: 30))
         app.buttons["Tabs"].tap()
+        XCTAssertTrue(app.buttons["New tab"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons.matching(identifier: "Close tab").count >= 2)
+    }
+
+    private func selectLinkAction(_ title: String, in app: XCUIApplication,
+                                  file: StaticString = #filePath, line: UInt = #line) -> Bool {
+        let action = app.buttons[title]
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            action.exists && action.isHittable
+        }, object: nil)
+        guard XCTWaiter.wait(for: [ready], timeout: 5) == .completed else {
+            capture(app, name: "Link action not hittable - \(title)")
+            XCTFail("Link action is not hittable: \(title)", file: file, line: line)
+            return false
+        }
+        action.tap()
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !action.exists
+        }, object: nil)
+        guard XCTWaiter.wait(for: [dismissed], timeout: 10) == .completed else {
+            capture(app, name: "Link action did not dismiss - \(title)")
+            XCTFail("Link action did not dismiss the menu: \(title)", file: file, line: line)
+            return false
+        }
+        return true
     }
 
     func testBrowserTabsAndDownloadSettings() {
@@ -162,9 +237,15 @@ extension MusicPlayerUITests {
         capture(app, name: "Jiza Browser Tabs")
         app.buttons["New tab"].tap()
         app.buttons["Downloads"].tap()
-        XCTAssertTrue(app.buttons["Choose download folder"].waitForExistence(timeout: 5))
+        let chooseFolder = app.buttons["Choose download folder"]
+        for _ in 0..<8 {
+            if chooseFolder.exists && chooseFolder.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(chooseFolder.waitForExistence(timeout: 5))
+        XCTAssertTrue(chooseFolder.isHittable)
         capture(app, name: "Jiza Browser Downloads")
-        app.buttons["Choose download folder"].tap()
+        chooseFolder.tap()
         XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 30))
         app.buttons["Cancel"].tap()
         app.buttons["Done"].tap()

@@ -32,8 +32,13 @@ final class ShareViewController: UIViewController {
                     try SharedInbox.saveText(url.absoluteString)
                 } else if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
                     let item = try await provider.loadItem(forTypeIdentifier: UTType.plainText.identifier)
-                    guard let text = item as? String else { continue }
-                    try SharedInbox.saveText(text)
+                    if let text = item as? String {
+                        try SharedInbox.saveText(text)
+                    } else if let url = item as? URL, url.isFileURL {
+                        let access = url.startAccessingSecurityScopedResource()
+                        defer { if access { url.stopAccessingSecurityScopedResource() } }
+                        try SharedInbox.save(url)
+                    } else { continue }
                 } else if let type = provider.registeredTypeIdentifiers.first(where: { UTType($0)?.conforms(to: .data) == true && $0 != UTType.fileURL.identifier }) {
                     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                         provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in

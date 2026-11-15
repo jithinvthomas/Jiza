@@ -15,14 +15,23 @@ struct BrowserSession: Codable {
     var selected: Int
 }
 
+struct BrowserLinkTarget: Identifiable {
+    let id = UUID()
+    let url: URL
+    let tab: BrowserTab
+}
+
 @MainActor
 final class BrowserModel: ObservableObject {
     @Published var tabs: [BrowserTab] = []
-    @Published var selectedID: UUID?
+    @Published var selectedID: UUID? {
+        didSet { selected?.activateRestoredPage() }
+    }
     @Published var bookmarks: [BrowserPage] = []
     @Published var history: [BrowserPage] = []
     @Published var error: String?
     @Published var downloadNotice = 0
+    @Published var linkActionTarget: BrowserLinkTarget?
     var automaticallyDownloadFiles: Bool {
         get { defaults.object(forKey: "jizaAutoDownloads") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "jizaAutoDownloads"); objectWillChange.send() }
@@ -39,10 +48,14 @@ final class BrowserModel: ObservableObject {
         bookmarks = decode([BrowserPage].self, key: "jizaBookmarks") ?? []
         history = decode([BrowserPage].self, key: "jizaHistory") ?? []
         if let session = decode(BrowserSession.self, key: "jizaBrowserSession") {
-            for url in session.urls.prefix(30) where Self.isWebURL(url) { _ = newTab(url: url, save: false) }
+            for url in session.urls.prefix(30) where Self.isWebURL(url) {
+                let tab = newTab(save: false)
+                tab.restoredURL = url
+            }
             if tabs.indices.contains(session.selected) { selectedID = tabs[session.selected].id }
         }
         if tabs.isEmpty { _ = newTab(save: false) }
+        selected?.activateRestoredPage()
     }
 
     nonisolated static func isWebURL(_ url: URL) -> Bool {
@@ -118,8 +131,8 @@ final class BrowserModel: ObservableObject {
     func removeHistory(_ id: UUID) { history.removeAll { $0.id == id }; encode(history, key: "jizaHistory") }
     func persistSession() {
         let normal = tabs.filter { !$0.isPrivate }
-        let urls = normal.compactMap { $0.web.url }.filter(Self.isWebURL)
-        let selectedURL = selected?.isPrivate == false ? selected?.web.url : nil
+        let urls = normal.compactMap(\.sessionURL).filter(Self.isWebURL)
+        let selectedURL = selected?.isPrivate == false ? selected?.sessionURL : nil
         encode(BrowserSession(urls: urls, selected: urls.firstIndex(where: { $0 == selectedURL }) ?? 0), key: "jizaBrowserSession")
     }
     private func encode<T: Encodable>(_ value: T, key: String) { if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) } }
@@ -127,17 +140,22 @@ final class BrowserModel: ObservableObject {
 }
 
 @MainActor
-final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDelegate, WKUIDelegate {
+final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDelegate, WKUIDelegate, UIGestureRecognizerDelegate {
     let id = UUID()
     let isPrivate: Bool
     let web: WKWebView
     weak var owner: BrowserModel?
+    var restoredURL: URL?
+    var sessionURL: URL? { web.url ?? restoredURL }
+    private var restoredPageActivated = false
     @Published var revision = 0
     @Published var desktop = false
     @Published var pageError: String?
     var popupParentID: UUID?
     private var committed = false
     private var observations: [NSKeyValueObservation] = []
+    var pressedLink: URL?
+    var linkPressRequest = UUID()
     init(configuration: WKWebViewConfiguration, isPrivate: Bool, owner: BrowserModel) {
         self.isPrivate = isPrivate
         self.owner = owner
@@ -146,7 +164,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         web.navigationDelegate = self
         web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
-        web.allowsLinkPreview = true
+        web.allowsLinkPreview = false
+        let linkPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLinkPress(_:)))
+        linkPress.minimumPressDuration = 0.45
+        linkPress.delegate = self
+        web.addGestureRecognizer(linkPress)
         let refresh = UIRefreshControl()
         refresh.accessibilityLabel = "Refresh page"
         refresh.addTarget(self, action: #selector(refreshPage), for: .valueChanged)
@@ -164,6 +186,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         }
         watch(\.url); watch(\.title); watch(\.estimatedProgress); watch(\.isLoading); watch(\.canGoBack); watch(\.canGoForward)
     }
+    func activateRestoredPage() {
+        guard !restoredPageActivated, let url = restoredURL, BrowserModel.isWebURL(url) else { return }
+        restoredPageActivated = true
+        web.load(URLRequest(url: url))
+    }
     func setDesktop(_ enabled: Bool) {
         desktop = enabled
         web.customUserAgent = enabled ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15" : nil
@@ -173,7 +200,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable, WKNavigationDe
         pageError = nil
         if web.reload() == nil { web.scrollView.refreshControl?.endRefreshing() }
     }
-    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { pageError = nil }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        pageError = nil
+        pressedLink = nil
+        linkPressRequest = UUID()
+    }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { committed = true; owner?.visit(self) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { report(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { report(error) }

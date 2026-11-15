@@ -6,6 +6,11 @@ from uuid import uuid4
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         route = self.path.split("?", 1)[0]
+        if route == "/forbidden":
+            self.send_response(403)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if route == "/redirect":
             self.send_response(302)
             self.send_header("Location", "/inline-video")

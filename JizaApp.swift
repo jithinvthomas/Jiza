@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 @MainActor
-struct InteraMusicPlayerApp: App {
+struct JizaApp: App {
     @StateObject private var security = AppSecurity()
     @State private var pendingFile: URL?
     @State private var pendingAccess: VideoFileAccess?

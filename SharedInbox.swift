@@ -2,7 +2,7 @@ import Foundation
 
 enum SharedInbox {
     static func directory() throws -> URL {
-        guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.interaauditsolutions.music") else {
+        guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.jiza.app") else {
             throw NSError(domain: "Jiza", code: 1, userInfo: [NSLocalizedDescriptionKey: "Shared storage requires signing Jiza with its App Group enabled."])
         }
         let folder = root.appendingPathComponent("Inbox", isDirectory: true)

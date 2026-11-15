@@ -36,30 +36,71 @@ extension BrowserTab {
             return BrowserMediaLink(url: url, label: row["label"] ?? url.lastPathComponent)
         }
     }
-    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-        guard let url = elementInfo.linkURL, BrowserModel.isWebURL(url) else { completionHandler(nil); return }
-        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            self?.linkMenu(for: url) ?? UIMenu(children: [])
-        })
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        pressedLink = nil
+        let request = UUID()
+        linkPressRequest = request
+        let point = touch.location(in: web)
+        let pageURL = web.url
+        resolveLink(at: point) { [weak self] url in
+            guard let self, self.linkPressRequest == request, self.web.url == pageURL else { return }
+            self.pressedLink = url
+        }
+        return true
     }
-    func linkMenu(for url: URL) -> UIMenu {
-        guard BrowserModel.isWebURL(url) else { return UIMenu(children: []) }
-        return UIMenu(children: [
-            UIAction(title: "Open in new tab", image: UIImage(systemName: "plus.square.on.square")) { [weak self] _ in
-                guard let self else { return }
-                self.owner?.newTab(url: url, isPrivate: self.isPrivate)
-            },
-            UIAction(title: "Open in private tab", image: UIImage(systemName: "eye.slash")) { [weak self] _ in
-                self?.owner?.newTab(url: url, isPrivate: true)
-            },
-            UIAction(title: "Download link", image: UIImage(systemName: "arrow.down.circle")) { [weak self] _ in self?.downloadLink(url) },
-            UIAction(title: "Save bookmark", image: UIImage(systemName: "bookmark")) { [weak self] _ in self?.owner?.bookmark(url) },
-            UIAction(title: "Copy link", image: UIImage(systemName: "doc.on.doc")) { _ in UIPasteboard.general.url = url },
-            UIAction(title: "Share link", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in self?.shareLink(url) }
-        ])
+    func resolveLink(at point: CGPoint, completion: @escaping (URL?) -> Void) {
+        // Resolve at touch-down so non-link presses can keep native text selection.
+        // Arguments are values, never executable page text. The isolated world
+        // prevents a website replacing the DOM APIs used by this lookup.
+        let script = """
+        const viewport = window.visualViewport;
+        const px = (viewport?.offsetLeft || 0) + x * (viewport?.width || innerWidth) / width;
+        const py = (viewport?.offsetTop || 0) + y * (viewport?.height || innerHeight) / height;
+        const link = document.elementFromPoint(px, py)?.closest('a[href]');
+        return link?.href || '';
+        """
+        web.callAsyncJavaScript(script, arguments: ["x": point.x, "y": point.y,
+            "width": max(web.bounds.width, 1), "height": max(web.bounds.height, 1)],
+            in: nil, in: .defaultClient) { result in
+                guard case .success(let value) = result, let text = value as? String,
+                      let url = URL(string: text), BrowserModel.isWebURL(url) else { completion(nil); return }
+                completion(url)
+            }
     }
-    private func shareLink(_ url: URL) {
-        guard var controller = web.window?.rootViewController else { return }
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        pressedLink != nil && !web.scrollView.isDragging
+    }
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+        // Give this link-only recognizer priority over native text long presses.
+        // It fails for other content, allowing normal text selection to proceed.
+        other is UILongPressGestureRecognizer
+    }
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        // WebKit's touch delivery and scrolling recognizers must not prevent
+        // lookup; competing tap and long-press actions remain exclusive.
+        !(other is UITapGestureRecognizer || other is UILongPressGestureRecognizer)
+    }
+    @objc func handleLinkPress(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .cancelled || gesture.state == .failed {
+            pressedLink = nil
+            linkPressRequest = UUID()
+            return
+        }
+        // Wait for lift-off: presenting during the touch allows WebKit's link
+        // activation/preview gestures to race with the action sheet.
+        guard gesture.state == .ended, let url = pressedLink else { return }
+        pressedLink = nil
+        linkPressRequest = UUID()
+        DispatchQueue.main.async { [weak self] in self?.presentLinkActions(for: url) }
+    }
+    private func presentLinkActions(for url: URL) {
+        // ASVS 2.2.1: keep the existing web-URL allowlist at the UI boundary.
+        guard BrowserModel.isWebURL(url), let owner, owner.selectedID == id,
+              owner.linkActionTarget == nil else { return }
+        owner.linkActionTarget = BrowserLinkTarget(url: url, tab: self)
+    }
+    func shareLink(_ url: URL) {
+        guard BrowserModel.isWebURL(url), var controller = web.window?.rootViewController else { return }
         while let presented = controller.presentedViewController { controller = presented }
         let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         sheet.popoverPresentationController?.sourceView = web

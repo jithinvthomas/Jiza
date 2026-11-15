@@ -109,6 +109,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
     private var observation: NSKeyValueObservation?
     private var stagingURL: URL?
     private var resumeData: Data?
+    private var cancellationPending = false
+    private var requestGeneration = UUID()
     private let folder: Data?
     init(download: WKDownload, web: WKWebView, isPrivate: Bool, owner: BrowserDownloads, folder: Data?) {
         self.web = web; self.isPrivate = isPrivate; self.owner = owner; self.folder = folder; date = Date()
@@ -121,6 +123,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         name = saved.name; localURL = url; status = "Saved"; active = false; fraction = 1
     }
     private func attach(_ value: WKDownload) {
+        cancellationPending = false
+        resumeData = nil
         download = value
         value.delegate = self
         originalRequest = value.originalRequest ?? originalRequest
@@ -140,26 +144,61 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
             }
         }
     }
-    func pause() { cancel(); status = "Paused" }
+    func pause() { guard active, status != "Saving" else { return }; cancel(); status = "Paused" }
     func retry() {
-        guard !active, let web, let request = originalRequest else { return }
-        web.startDownload(using: request) { [weak self] in self?.attach($0) }
-    }
-    func cancel() {
-        guard active else { return }
-        active = false; status = "Cancelled"; canRetry = originalRequest?.httpMethod == "GET"
-        download?.cancel { [weak self] data in
-            Task { @MainActor [weak self] in self?.resumeData = data; self?.canResume = data != nil }
+        guard !active, !cancellationPending, canRetry, let web, let request = originalRequest else { return }
+        active = true
+        canRetry = false
+        status = "Downloading"
+        download?.delegate = nil; download = nil; observation = nil
+        requestGeneration = UUID()
+        let generation = requestGeneration
+        web.startDownload(using: request) { [weak self] download in
+            guard let self, self.requestGeneration == generation, self.active else { download.cancel(); return }
+            self.attach(download)
         }
     }
+    func cancel() {
+        guard active, status != "Saving" else { return }
+        beginCancellation()
+        guard let download else { finishCancellation(nil); return }
+        download.cancel { [weak self] data in
+            Task { @MainActor [weak self] in self?.finishCancellation(data) }
+        }
+    }
+    func beginCancellation() {
+        requestGeneration = UUID()
+        cancellationPending = true
+        active = false; status = "Cancelled"
+        canRetry = false; canResume = false; resumeData = nil
+        observation = nil
+    }
+    func finishCancellation(_ data: Data?) {
+        guard cancellationPending else { return }
+        cancellationPending = false
+        resumeData = data; canResume = data != nil
+        canRetry = data == nil && originalRequest?.httpMethod == "GET"
+        download?.delegate = nil
+        download = nil
+    }
     func resume() {
-        guard let resumeData, let web else { return }
-        web.resumeDownload(fromResumeData: resumeData) { [weak self] in self?.attach($0) }
+        guard !active, !cancellationPending, let resumeData, let web else { return }
+        active = true
+        canResume = false
+        status = "Downloading"
+        download?.delegate = nil; download = nil; observation = nil
+        requestGeneration = UUID()
+        let generation = requestGeneration
+        web.resumeDownload(fromResumeData: resumeData) { [weak self] download in
+            guard let self, self.requestGeneration == generation, self.active else { download.cancel(); return }
+            self.attach(download)
+        }
     }
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        guard download === self.download, active else { completionHandler(nil); return }
         if let response = response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
             active = false; status = "Server returned HTTP \(response.statusCode). Sign in or refresh the download link, then retry."
-            canRetry = true; completionHandler(nil); return
+            canRetry = originalRequest?.httpMethod == "GET"; completionHandler(nil); return
         }
         name = BrowserDownloads.safeFilename(suggestedFilename)
         if URL(fileURLWithPath: name).pathExtension.isEmpty, let mime = response.mimeType,
@@ -173,7 +212,8 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         } catch { active = false; status = "Could not create download file"; completionHandler(nil) }
     }
     func downloadDidFinish(_ download: WKDownload) {
-        guard let stagingURL else { return }
+        guard download === self.download, active, let stagingURL else { return }
+        canResume = false; canRetry = false
         status = "Saving"
         let bookmark = folder
         let targetName = name
@@ -214,9 +254,17 @@ final class BrowserDownload: NSObject, ObservableObject, Identifiable, WKDownloa
         }
     }
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        guard download === self.download else { return }
+        recordFailure(error, resumeData: resumeData)
+    }
+    func recordFailure(_ error: Error, resumeData: Data?) {
+        // The cancel completion owns resume data while cancellation is pending.
+        guard active, !cancellationPending else { return }
         active = false
-        if status != "Cancelled" && status != "Paused" { status = "Failed: " + error.localizedDescription }
+        status = "Failed: " + error.localizedDescription
         self.resumeData = resumeData; canResume = resumeData != nil; canRetry = originalRequest?.httpMethod == "GET"
         observation = nil
+        download?.delegate = nil
+        download = nil
     }
 }
