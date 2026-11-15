@@ -75,10 +75,10 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:8765/page >/dev/null
-          xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
           if [ "$NATIVE_GLASS" = "true" ]; then
-            xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:JizaUITests/MusicPlayerUITests/testBrowserPullRefreshAndLinkActions -test-iterations 3 -resultBundlePath BrowserInteractions.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+            xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -only-testing:JizaUITests/MusicPlayerUITests/testBrowserPullRefreshAndLinkActions -test-iterations 3 -run-tests-until-failure -resultBundlePath BrowserInteractions.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
           fi
+          xcodebuild test -workspace Jiza.xcworkspace -scheme Jiza -destination "platform=iOS Simulator,id=$DEVICE_ID" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
       - name: Export simulator screenshots
         if: always()
         run: python3 export_test_images.py

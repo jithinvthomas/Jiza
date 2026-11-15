@@ -38,9 +38,9 @@ extension BrowserTab {
     }
     func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
         guard let url = elementInfo.linkURL, BrowserModel.isWebURL(url) else { completionHandler(nil); return }
-        // Cancel WebKit's preview interaction before presenting an action sheet.
-        // Its native preview menu can remain visible but unresponsive on iOS 26.
-        completionHandler(nil)
+        // An explicit empty configuration prevents WebKit's default link-preview
+        // fallback. Returning nil can put that preview above the action sheet.
+        completionHandler(UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) })
         DispatchQueue.main.async { [weak self] in self?.presentLinkActions(for: url) }
     }
     private func presentLinkActions(for url: URL) {

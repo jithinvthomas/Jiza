@@ -6,6 +6,8 @@ import shutil
 import tempfile
 
 result = "TestResults.xcresult"
+if not pathlib.Path(result).exists():
+    result = "BrowserInteractions.xcresult"
 output = pathlib.Path("test-images")
 output.mkdir(exist_ok=True)
 
