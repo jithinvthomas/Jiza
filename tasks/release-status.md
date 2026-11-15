@@ -20,7 +20,7 @@ The default `main` branch contains a separate Windows download-manager update an
 
 Native XCTest and archive validation must run on macOS through the checked-in workflows. Windows source checks and review are not substitutes for those results.
 
-Target device: iPhone 14 Pro with the user's latest installed iOS. Compatibility CI uses macOS 15 / Xcode 16.4; macOS 14 runners were retired on 2 November 2026. The other job retains the newer iOS SDK and simulator coverage.
+Target device: iPhone 14 Pro with the user's latest installed iOS. Compatibility CI uses macOS 15 / Xcode 16.3; macOS 14 runners were retired on 2 November 2026. Xcode 16.4 was excluded after the documented missing-libswiftWebKit simulator launch crash (https://developer.apple.com/forums/thread/785964). The other job retains the newer iOS SDK and simulator coverage. Jobs have a 40-minute limit so a launch failure cannot hang for six hours.
 
 The baseline's macOS 14 simulator job passed. Its macOS 26 job failed in ad-block integration and download-folder UI coverage. These tests remain enabled with their behavior assertions intact.
 

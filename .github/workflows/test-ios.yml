@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   simulator:
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +27,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select compatibility Xcode
         if: matrix.runner == 'macos-15'
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+        # Xcode 16.4 + iOS 18.5 can fail at launch with missing libswiftWebKit.
+        # https://developer.apple.com/forums/thread/785964
+        run: sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
       - name: Check Xcode and SDK
         run: |
           xcodebuild -version
@@ -70,7 +73,7 @@ jobs:
         run: |
           if [ -d TestResults.xcresult ]; then
             xcrun xcresulttool get test-results summary --path TestResults.xcresult > test-summary.json \
-              || xcrun xcresulttool get --format json --path TestResults.xcresult > test-summary.json
+              || xcrun xcresulttool get object --legacy --format json --path TestResults.xcresult > test-summary.json
             cat test-summary.json
           fi
       - uses: actions/upload-artifact@v4
