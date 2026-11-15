@@ -26,7 +26,7 @@ final class BrowserModelTests: XCTestCase {
         }
         XCTAssertEqual(tab.web.title, "Link lookup")
         func point(_ id: String) async throws -> CGPoint {
-            let value = try await tab.web.callAsyncJavaScript("const r = document.getElementById(id).getBoundingClientRect(); return [r.x+r.width/2, r.y+r.height/2];", arguments: ["id": id], in: nil, in: .defaultClient)
+            let value: Any? = try await tab.web.callAsyncJavaScript("const r = document.getElementById(id).getBoundingClientRect(); return [r.x+r.width/2, r.y+r.height/2];", arguments: ["id": id], in: nil, contentWorld: .defaultClient)
             let values = try XCTUnwrap(value as? [Double])
             return CGPoint(x: values[0], y: values[1])
         }
