@@ -3,6 +3,14 @@ import WebKit
 @testable import Jiza
 
 final class RemoteWorkspaceTests: XCTestCase {
+    func testTerminalAcceptsOnlySafeGuacamoleConnectionFragments() {
+        XCTAssertNotNil(RemoteWorkspacePolicy.terminalURL("https://node.example/guacamole/#/client/MQBjAHBvc3RncmVzcWw="))
+        XCTAssertNotNil(RemoteWorkspacePolicy.terminalURL("https://node.example/terminal/"))
+        for value in ["https://node.example/#token=secret", "https://node.example/?token=secret#/client/MQ==", "https://user:password@node.example/#/client/MQ==", "http://node.example/#/client/MQ==", "https://node.example/#/client/../invalid"] {
+            XCTAssertNil(RemoteWorkspacePolicy.terminalURL(value), value)
+        }
+    }
+
     func testLocalShellRunsPipelinesAndPersistsRealFiles() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

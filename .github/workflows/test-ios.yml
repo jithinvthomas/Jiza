@@ -54,6 +54,7 @@ jobs:
       - name: Generate project
         run: |
           bash TorrentNative/build.sh iphonesimulator "$(uname -m)"
+          bash NativeShell/build.sh iphonesimulator "$(uname -m)"
           xcodegen generate
           sed -i '' 's/objectVersion = 77;/objectVersion = 60;/' Jiza.xcodeproj/project.pbxproj
       - name: Create matching iPhone 14 Pro simulator

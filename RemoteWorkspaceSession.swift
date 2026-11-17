@@ -20,6 +20,16 @@ enum RemoteWorkspacePolicy {
         parts?.fragment = "/client/\(clientKey)"
         return parts?.url
     }
+
+    static func terminalURL(_ text: String) -> URL? {
+        if let gateway = gateway(text) { return gateway }
+        guard var parts = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let fragment = parts.fragment, fragment.hasPrefix("/client/"), parts.query == nil else { return nil }
+        let key = String(fragment.dropFirst("/client/".count))
+        parts.fragment = nil
+        guard let base = parts.url else { return nil }
+        return desktopURL(gateway: base.absoluteString, clientKey: key)
+    }
 }
 
 struct RemoteWorkspaceSession: View {
@@ -59,7 +69,7 @@ struct RemoteWorkspaceSession: View {
                     .disabled(isLoading || error != nil)
                 }
             }
-            .alert("Desktop controls", isPresented: Binding(get: { inputMessage != nil }, set: { if !$0 { inputMessage = nil } })) {
+            .alert("Remote controls", isPresented: Binding(get: { inputMessage != nil }, set: { if !$0 { inputMessage = nil } })) {
                 Button("OK") { inputMessage = nil }
             } message: { Text(inputMessage ?? "") }
             .overlay {
