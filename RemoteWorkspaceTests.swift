@@ -11,35 +11,6 @@ final class RemoteWorkspaceTests: XCTestCase {
         }
     }
 
-    func testLocalShellRunsPipelinesAndPersistsRealFiles() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let write = await LocalShell.run("echo jiza-shell-proof | grep proof > proof.txt", directory: root)
-        XCTAssertEqual(write.status, 0, write.output)
-        XCTAssertEqual(try String(contentsOf: root.appendingPathComponent("proof.txt")), "jiza-shell-proof\n")
-        let read = await LocalShell.run("cat proof.txt", directory: root)
-        XCTAssertEqual(read.status, 0, read.output)
-        XCTAssertEqual(read.output, "jiza-shell-proof\n")
-    }
-
-    @MainActor
-    func testLocalShellKeepsItsWorkingDirectoryAndReportsUnknownCommands() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let child = root.appendingPathComponent("space folder", isDirectory: true)
-        try FileManager.default.createDirectory(at: child, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let model = LocalTerminalModel()
-        model.directory = root
-        await model.execute("cd 'space folder'")
-        XCTAssertEqual(model.directory.resolvingSymlinksInPath(), child.resolvingSymlinksInPath())
-        await model.execute("echo kept > saved.txt")
-        XCTAssertEqual(try String(contentsOf: child.appendingPathComponent("saved.txt")), "kept\n")
-        let unknown = await LocalShell.run("jiza_command_does_not_exist", directory: root)
-        XCTAssertNotEqual(unknown.status, 0)
-        XCTAssertFalse(unknown.output.isEmpty)
-    }
-
     @MainActor
     func testGuacamoleInputUsesTheGatewayControlsAndRejectsOtherPages() async throws {
         let web = WKWebView()

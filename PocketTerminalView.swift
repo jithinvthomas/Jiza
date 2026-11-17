@@ -14,7 +14,6 @@ struct PocketTerminalView: View {
     @State private var activeURL: URL?
     @State private var reload = UUID()
     @State private var sessionDataStore = WKWebsiteDataStore.nonPersistent()
-    @State private var localPresented = false
 
     private enum TerminalHost: String {
         case oracle, windows
@@ -32,27 +31,16 @@ struct PocketTerminalView: View {
             ZStack {
                 JizaWorkspaceBackdrop()
                 if let activeURL {
-                    RemoteWorkspaceSession(url: activeURL, dataStore: sessionDataStore,
-                                           showsInputControls: activeURL.fragment?.hasPrefix("/client/") == true).id(reload)
+                    RemoteWorkspaceSession(url: activeURL, dataStore: sessionDataStore, showsInputControls: true).id(reload)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             JizaWorkspaceIntro(
                                 eyebrow: "Developer tools",
                                 title: "Pocket Terminal",
-                                detail: "One workspace for local iPhone commands and your Oracle or Windows shell.",
+                                detail: "Your coding workspace, wherever you are. Connect to a remote shell and run Claude Code or Codex.",
                                 symbol: "terminal.fill"
                             )
-
-                            NavigationLink(isActive: $localPresented) { LocalTerminalView() } label: { EmptyView() }
-                                .hidden()
-                            JizaWorkspaceCard(
-                                title: "On this iPhone",
-                                detail: "Local Unix commands · Works offline",
-                                symbol: "iphone",
-                                color: JizaStyle.mint
-                            ) { localPresented = true }
-                            .accessibilityIdentifier("terminalLocal")
 
                             JizaWorkspaceCard(
                                 title: "Oracle Cloud",
@@ -87,7 +75,7 @@ struct PocketTerminalView: View {
                                         in: RoundedRectangle(cornerRadius: 22))
 
                             JizaWorkspaceNote(
-                                text: "Local commands run in Jiza's sandbox. Oracle and Windows require a private authenticated gateway; their commands run on the selected computer."
+                                text: "One-tap connections require a previously configured, authenticated HTTPS SSH gateway. Commands execute on the remote server, not on your iPhone."
                             )
                         }
                         .padding(.horizontal, 20)

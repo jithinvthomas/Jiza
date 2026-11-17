@@ -34,7 +34,7 @@ jobs:
         run: brew install xcodegen
 
       - name: Generate Xcode project
-        run: bash TorrentNative/build.sh iphoneos arm64 && bash NativeShell/build.sh iphoneos arm64 && xcodegen generate
+        run: bash TorrentNative/build.sh iphoneos arm64 && xcodegen generate
 
       - name: Normalize project format
         run: |

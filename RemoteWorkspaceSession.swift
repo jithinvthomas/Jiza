@@ -41,22 +41,23 @@ struct RemoteWorkspaceSession: View {
     @State private var revision = UUID()
     @State private var inputRequest: RemoteWorkspaceInput.Request?
     @State private var inputMessage: String?
+    @State private var inputBusy = false
 
     var body: some View {
         RemoteWorkspaceWebView(url: url, dataStore: dataStore, isLoading: $isLoading, error: $error,
-                               inputRequest: inputRequest, inputMessage: $inputMessage)
+                               inputRequest: inputRequest, inputMessage: $inputMessage, inputBusy: $inputBusy)
             .id(revision)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if showsInputControls {
                     HStack {
-                        Button { inputRequest = .init(inputID: "keyboard") } label: {
+                        Button { sendInput("keyboard") } label: {
                             Label("Keyboard", systemImage: "keyboard")
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .accessibilityIdentifier("desktopKeyboard")
                         Menu {
-                            Button("Touchpad cursor") { inputRequest = .init(inputID: "relative") }
-                            Button("Direct touch") { inputRequest = .init(inputID: "absolute") }
+                            Button("Touchpad cursor") { sendInput("relative") }
+                            Button("Direct touch") { sendInput("absolute") }
                         } label: {
                             Label("Pointer", systemImage: "cursorarrow.motionlines")
                                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -66,7 +67,7 @@ struct RemoteWorkspaceSession: View {
                     .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, 12)
                     .background(.bar)
-                    .disabled(isLoading || error != nil)
+                    .disabled(isLoading || error != nil || inputBusy)
                 }
             }
             .alert("Remote controls", isPresented: Binding(get: { inputMessage != nil }, set: { if !$0 { inputMessage = nil } })) {
@@ -80,7 +81,10 @@ struct RemoteWorkspaceSession: View {
                         Text(error).multilineTextAlignment(.center)
                         Text("Check that your private network and gateway are available.")
                             .font(.footnote).foregroundStyle(.secondary)
-                        Button("Try again") { self.error = nil; isLoading = true; revision = UUID() }
+                        Button("Try again") {
+                            self.error = nil; inputRequest = nil; inputBusy = false
+                            isLoading = true; revision = UUID()
+                        }
                             .buttonStyle(.borderedProminent)
                     }
                     .padding(24)
@@ -92,6 +96,12 @@ struct RemoteWorkspaceSession: View {
                         .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
+    }
+
+    private func sendInput(_ inputID: String) {
+        guard !inputBusy else { return }
+        inputBusy = true
+        inputRequest = .init(inputID: inputID)
     }
 }
 
@@ -130,6 +140,7 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
     @Binding var error: String?
     var inputRequest: RemoteWorkspaceInput.Request?
     @Binding var inputMessage: String?
+    @Binding var inputBusy: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator(isLoading: $isLoading, error: $error) }
 
@@ -153,10 +164,15 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
         context.coordinator.lastInputRequest = request.id
         // Restrict page-world interaction to the configured gateway origin after redirects.
         guard web.url?.scheme == url.scheme, web.url?.host == url.host, web.url?.port == url.port else {
-            inputMessage = "Return to your Guacamole desktop after signing in, then try again."
+            DispatchQueue.main.async {
+                inputMessage = "Return to your Guacamole connection after signing in, then try again."
+                inputBusy = false
+            }
             return
         }
         web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": request.inputID], in: nil, in: .page) { result in
+            guard context.coordinator.lastInputRequest == request.id else { return }
+            inputBusy = false
             if case .success(let value) = result, value as? Bool == true { return }
             inputMessage = "Open a Guacamole desktop first. If your gateway uses different controls, swipe right from its left edge and select the on-screen keyboard or touchpad mouse mode."
         }
