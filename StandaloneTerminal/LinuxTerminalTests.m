@@ -42,7 +42,7 @@
 }
 - (void)testControlKeyInterruptsALinuxProcess {
     [self.app typeText:@"sleep 60\n"];
-    XCUIElement *control = self.app.buttons[@"terminalControl"];
+    XCUIElement *control = self.app.switches[@"terminalControl"];
     XCTAssertTrue([control waitForExistenceWithTimeout:5]);
     [control tap];
     [self.app typeText:@"c"];

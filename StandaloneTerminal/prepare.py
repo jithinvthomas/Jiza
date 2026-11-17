@@ -58,7 +58,13 @@ def prepare(root: Path, root_archive: Path):
     about = root / 'app/AboutViewController.m'
     about.write_text(about.read_text().replace('@"iSH %@ (Build %@)"', '@"Jiza Terminal %@ (iSH-based, Build %@)"'))
     repositories = root / 'app/gen_apk_repositories.py'
-    repositories.write_text(repositories.read_text().replace('http://apk.ish.app/', 'https://apk.ish.app/'))
+    # The upstream snapshot mirror does not serve working TLS. Use Alpine's
+    # official HTTPS repositories, retaining apk signature verification.
+    repositories.write_text('''import os
+from pathlib import Path
+target = Path(os.environ['BUILT_PRODUCTS_DIR']) / os.environ['CONTENTS_FOLDER_PATH'] / 'repositories.txt'
+target.write_text('https://dl-cdn.alpinelinux.org/alpine/v3.19/main\\nhttps://dl-cdn.alpinelinux.org/alpine/v3.19/community\\n')
+''')
     terminal = root / 'app/Terminal.m'
     terminal.write_text(terminal.read_text().replace('_webView = [[CustomWebView alloc] initWithFrame:webviewSize configuration:config];',
         '_webView = [[CustomWebView alloc] initWithFrame:webviewSize configuration:config];\n        _webView.accessibilityIdentifier = @"linuxTerminalWebView";'))
