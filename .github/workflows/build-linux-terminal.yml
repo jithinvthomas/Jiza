@@ -46,7 +46,7 @@ jobs:
             -configuration Release -destination "platform=iOS Simulator,id=$DEVICE_ID" \
             -derivedDataPath "$RUNNER_TEMP/JizaLinuxSimulator" -resultBundlePath LinuxTerminal.xcresult \
             -parallel-testing-enabled NO -only-testing:iSHUITests/UITests \
-            IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             | tee linux-simulator.log
       - name: Archive the standalone iPhone app
         run: |
@@ -54,7 +54,7 @@ jobs:
           xcodebuild archive -project linux-source/iSH.xcodeproj -scheme iSH \
             -configuration Release -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/JizaLinuxDevice" -archivePath JizaTerminal.xcarchive \
-            IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             | tee linux-archive.log
           mkdir -p package/Payload
           cp -R JizaTerminal.xcarchive/Products/Applications/*.app package/Payload/
@@ -62,6 +62,7 @@ jobs:
           /usr/bin/zip -qr ../Jiza-Terminal-unsigned.ipa Payload
       - name: Package corresponding source
         run: |
+          python3 StandaloneTerminal/collect-alpine-source.py linux-source/Alpine-Sources
           mkdir -p linux-source/Jiza-Build-Recipe
           cp -R StandaloneTerminal/. linux-source/Jiza-Build-Recipe/
           cp .github/workflows/build-linux-terminal.yml linux-source/Jiza-Build-Recipe/

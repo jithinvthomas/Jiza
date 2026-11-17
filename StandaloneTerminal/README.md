@@ -17,9 +17,9 @@ Source: https://github.com/ish-app/ish at
 `ce96e698f1820b9d8db47e87c501ecb89119d7ce`, under GPLv3 and the upstream iOS
 additional terms. All original copyright notices and source attribution remain.
 The build artifact includes the modified source, pinned submodule sources,
-root filesystem, and this build recipe. The binary filesystem is upstream's
-Alpine 3.19 x86 image; package sources and build recipes are maintained by Alpine
-and iSH. Root image SHA-256:
+root filesystem, this build recipe, and checksum-verified source archives and
+Alpine build recipes for the bundled GPL utilities. The binary filesystem is
+upstream's Alpine 3.19 x86 image. Root image SHA-256:
 `776b16416894e5a8bec220b8d4726c46bb993289e8e48fdac54a519396e40a93`.
 
 After installing, use:

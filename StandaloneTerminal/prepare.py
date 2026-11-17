@@ -23,6 +23,8 @@ def prepare(root: Path, root_archive: Path):
 
     config = root / 'app/iSH.xcconfig'
     config.write_text(config.read_text().replace('ROOT_BUNDLE_IDENTIFIER = app.ish.iSH', 'ROOT_BUNDLE_IDENTIFIER = com.jiza.terminal'))
+    project_config = root / 'app/Project.xcconfig'
+    project_config.write_text(project_config.read_text().replace('MARKETING_VERSION = 1.3.3', 'MARKETING_VERSION = 1.0'))
     config = root / 'app/App.xcconfig'
     config.write_text(config.read_text().replace('PRODUCT_NAME = iSH', 'PRODUCT_NAME = JizaTerminal')
                       .replace('CODE_SIGN_ENTITLEMENTS = app/iSH.entitlements', 'CODE_SIGN_ENTITLEMENTS = app/JizaTerminal.entitlements'))
@@ -60,6 +62,9 @@ def prepare(root: Path, root_archive: Path):
     controller.write_text(controller.read_text().replace('    [super viewDidLoad];',
         '    [super viewDidLoad];\n    self.controlKey.accessibilityIdentifier = @"terminalControl";\n    self.escapeKey.accessibilityIdentifier = @"terminalEscape";\n    self.hideKeyboardButton.accessibilityIdentifier = @"terminalKeyboard";', 1))
     shutil.copy2(recipe / 'LinuxTerminalTests.m', root / 'app/UITests/UITests.m')
+    (root / 'app/JizaLicenses').mkdir(exist_ok=True)
+    for name in ['GPL-2.0.txt', 'GPL-3.0.txt', 'OpenSSL-LICENSE.txt', 'zlib-LICENSE.txt']:
+        shutil.copy2(recipe / name, root / 'app/JizaLicenses' / name)
     # Keep original source and license acknowledgments; use Jiza's existing icon.
     icons = recipe / 'AppIcon'
     destination = root / 'app/Assets.xcassets/JizaIcon.appiconset'
@@ -83,6 +88,7 @@ set -euo pipefail
 cp "$SRCROOT/app/jiza-root.tar.gz" "$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/root.tar.gz"
 mkdir -p "$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Licenses"
 cp "$SRCROOT/LICENSE.md" "$SRCROOT/LICENSE.IOS" "$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Licenses/"
+cp "$SRCROOT/app/JizaLicenses/"*.txt "$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Licenses/"
 ''')
     provenance = {'name': 'Jiza Terminal', 'upstream': 'https://github.com/ish-app/ish', 'sourceCommit': SOURCE_COMMIT,
                   'rootFilesystem': {'url': ROOT_URL, 'sha256': ROOT_SHA256, 'distribution': 'Alpine Linux 3.19 x86'},
