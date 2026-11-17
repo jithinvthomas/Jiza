@@ -38,11 +38,19 @@ jobs:
           DEVICE_ID=$(xcrun simctl create "Jiza Linux iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro "$RUNTIME_ID")
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
           xcrun simctl boot "$DEVICE_ID"
-          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: Build the simulator app while the device boots
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing -project linux-source/iSH.xcodeproj -scheme iSH \
+            -configuration Release -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -derivedDataPath "$RUNNER_TEMP/JizaLinuxSimulator" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO | tee linux-simulator-build.log
       - name: Test local Linux, persistent files, packages and keyboard
         run: |
           set -o pipefail
-          xcodebuild test -project linux-source/iSH.xcodeproj -scheme iSH \
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcodebuild test-without-building -project linux-source/iSH.xcodeproj -scheme iSH \
             -configuration Release -destination "platform=iOS Simulator,id=$DEVICE_ID" \
             -derivedDataPath "$RUNNER_TEMP/JizaLinuxSimulator" -resultBundlePath LinuxTerminal.xcresult \
             -parallel-testing-enabled NO -only-testing:iSHUITests/UITests \
@@ -85,6 +93,7 @@ jobs:
             linux-tests.json
             linux-screenshots
             linux-simulator.log
+            linux-simulator-build.log
             linux-archive.log
             linux-source/JIZA-PROVENANCE.json
           if-no-files-found: error
