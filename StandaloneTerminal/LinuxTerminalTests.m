@@ -10,7 +10,9 @@
     self.app = [XCUIApplication new];
     self.app.launchArguments = @[@"-Skip Startup Message", @"1"];
     [self.app launch];
-    XCTAssertTrue([self.app.webViews.staticTexts.firstMatch waitForExistenceWithTimeout:30]);
+    XCUIElement *prompt = [self.app.webViews.staticTexts matchingPredicate:
+        [NSPredicate predicateWithFormat:@"label ENDSWITH ':~#' OR label ENDSWITH ':~# '"]].firstMatch;
+    XCTAssertTrue([prompt waitForExistenceWithTimeout:30]);
     // Dismiss iOS's first-use Slide to Type tutorial if it covers the keyboard.
     XCUIElement *continueButton = self.app.buttons[@"Continue"];
     if (continueButton.exists) [continueButton tap];

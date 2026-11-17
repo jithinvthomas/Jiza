@@ -36,6 +36,15 @@ def prepare(root: Path, root_archive: Path):
     new = '    return [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;'
     assert old in group.read_text()
     group.write_text(group.read_text().replace(old, new))
+    roots = root / 'app/Roots.m'
+    text = roots.read_text()
+    start = text.index('- (void)syncFileProviderDomains {')
+    end = text.index('\n- (BOOL)accessInstanceVariablesDirectly', start)
+    text = text[:start] + text[end:]
+    text = text.replace('#import <FileProvider/FileProvider.h>\n', '')
+    text = text.replace('@property BOOL updatingDomains;\n', '').replace('@property BOOL domainsNeedUpdate;\n', '')
+    text = re.sub(r'^\s*\[self syncFileProviderDomains\];\n', '', text, flags=re.M)
+    roots.write_text(text)
     pbx = root / 'iSH.xcodeproj/project.pbxproj'
     text = pbx.read_text()
     text = '\n'.join(line for line in text.split('\n') if 'iSHFileProvider.appex in Embed Foundation Extensions' not in line)
@@ -68,6 +77,11 @@ target.write_text('https://dl-cdn.alpinelinux.org/alpine/v3.19/main\\nhttps://dl
     terminal = root / 'app/Terminal.m'
     terminal.write_text(terminal.read_text().replace('_webView = [[CustomWebView alloc] initWithFrame:webviewSize configuration:config];',
         '_webView = [[CustomWebView alloc] initWithFrame:webviewSize configuration:config];\n        _webView.accessibilityIdentifier = @"linuxTerminalWebView";'))
+    input_view = root / 'app/TerminalView.m'
+    text = input_view.read_text().replace('- (void)insertText:(NSString *)text {', '''- (void)insertText:(NSString *)text {
+    // Empty IME commits must not consume the armed one-shot Ctrl modifier.
+    if (text.length == 0) return;''')
+    input_view.write_text(text)
     controller = root / 'app/TerminalViewController.m'
     controller.write_text(controller.read_text().replace('    [super viewDidLoad];',
         '    [super viewDidLoad];\n    self.controlKey.accessibilityIdentifier = @"terminalControl";\n    self.escapeKey.accessibilityIdentifier = @"terminalEscape";\n    self.hideKeyboardButton.accessibilityIdentifier = @"terminalKeyboard";', 1))
