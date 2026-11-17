@@ -39,12 +39,16 @@ def prepare(root: Path, root_archive: Path):
     pbx = root / 'iSH.xcodeproj/project.pbxproj'
     text = pbx.read_text()
     text = '\n'.join(line for line in text.split('\n') if 'iSHFileProvider.appex in Embed Foundation Extensions' not in line)
+    for match in list(re.finditer(r'^\t\t([A-F0-9]{24}) /\* PBXTargetDependency \*/ = \{\n.*?^\t\t\};', text, re.M | re.S)):
+        if 'target = BB88F48F2154760800A341FD' in match.group(0):
+            text = text.replace(match.group(0), '')
+            text = re.sub(r'^\s*' + match.group(1) + r' /\* PBXTargetDependency \*/,\n', '', text, flags=re.M)
     lines = text.splitlines()
     for index, line in enumerate(lines):
         if 'shellScript = "curl -L' in line:
             lines[index] = '\t\t\tshellScript = "bash \\\"$SRCROOT/app/jiza-rootfs.sh\\\"\\n";'
     pbx.write_text('\n'.join(lines) + '\n')
-    # The remaining target is harmless when built, but its product is not shipped.
+    # The upstream extension target remains in source, but is neither built nor embedded.
     info = root / 'app/Info.plist'
     text = info.read_text().replace('<key>CFBundleName</key>', '<key>CFBundleDisplayName</key>\n\t<string>Jiza Terminal</string>\n\t<key>CFBundleName</key>')
     text = text.replace('Programs running in iSH', 'Programs running in Jiza Terminal')
