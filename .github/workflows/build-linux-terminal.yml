@@ -1,0 +1,89 @@
+name: Build standalone Jiza Linux Terminal
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/jiza-linux-terminal]
+permissions:
+  contents: read
+concurrency:
+  group: jiza-linux-terminal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux-iphone:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ish-app/ish
+          ref: ce96e698f1820b9d8db47e87c501ecb89119d7ce
+          path: linux-source
+      - name: Fetch pinned emulator dependencies
+        working-directory: linux-source
+        run: git submodule update --init deps/libapps deps/libarchive
+      - name: Select Xcode and install build tools
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+          brew install llvm lld ninja libarchive meson
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+      - name: Prepare the standalone Linux app
+        run: |
+          curl --fail --location --retry 3 https://github.com/ish-app/roots/releases/download/g00712ff0a54b2839c5aa1a8ed758003ca65357dc/appstore-apk.tar.gz -o alpine-root.tar.gz
+          python3 StandaloneTerminal/prepare.py linux-source alpine-root.tar.gz
+      - name: Create matching iPhone 14 Pro simulator
+        run: |
+          SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          RUNTIME_ID=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; sdk=".".join(sys.argv[1].split(".")[:2]); print(next(r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and "SimRuntime.iOS-" in r["identifier"] and ".".join(r["version"].split(".")[:2]) == sdk))' "$SDK_VERSION")
+          DEVICE_ID=$(xcrun simctl create "Jiza Linux iPhone 14 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-14-Pro "$RUNTIME_ID")
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: Test local Linux, persistent files, packages and keyboard
+        run: |
+          set -o pipefail
+          xcodebuild test -project linux-source/iSH.xcodeproj -scheme iSH \
+            -configuration Release -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -derivedDataPath "$RUNNER_TEMP/JizaLinuxSimulator" -resultBundlePath LinuxTerminal.xcresult \
+            -parallel-testing-enabled NO -only-testing:iSHUITests/UITests \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | tee linux-simulator.log
+      - name: Archive the standalone iPhone app
+        run: |
+          set -o pipefail
+          xcodebuild archive -project linux-source/iSH.xcodeproj -scheme iSH \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/JizaLinuxDevice" -archivePath JizaTerminal.xcarchive \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | tee linux-archive.log
+          mkdir -p package/Payload
+          cp -R JizaTerminal.xcarchive/Products/Applications/*.app package/Payload/
+          cd package
+          /usr/bin/zip -qr ../Jiza-Terminal-unsigned.ipa Payload
+      - name: Package corresponding source
+        run: |
+          mkdir -p linux-source/Jiza-Build-Recipe
+          cp -R StandaloneTerminal/. linux-source/Jiza-Build-Recipe/
+          cp .github/workflows/build-linux-terminal.yml linux-source/Jiza-Build-Recipe/
+          cp alpine-root.tar.gz linux-source/Jiza-Build-Recipe/
+          tar --exclude='.git' -czf Jiza-Terminal-source.tar.gz linux-source
+      - name: Export test summaries and screenshots
+        if: always()
+        run: |
+          if [ -d LinuxTerminal.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path LinuxTerminal.xcresult --format json > linux-tests.json
+            xcrun xcresulttool export attachments --path LinuxTerminal.xcresult --output-path linux-screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Jiza-Standalone-Linux-Terminal
+          path: |
+            Jiza-Terminal-unsigned.ipa
+            Jiza-Terminal-source.tar.gz
+            linux-tests.json
+            linux-screenshots
+            linux-simulator.log
+            linux-archive.log
+            linux-source/JIZA-PROVENANCE.json
+          if-no-files-found: error
