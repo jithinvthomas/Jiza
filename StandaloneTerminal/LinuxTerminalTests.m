@@ -10,12 +10,14 @@
     self.app = [XCUIApplication new];
     self.app.launchArguments = @[@"-Skip Startup Message", @"1"];
     [self.app launch];
+    XCTAssertTrue([self.app.buttons[@"terminalControl"] waitForExistenceWithTimeout:30]);
+    // The first-use keyboard tutorial hides the terminal from accessibility.
+    // Dismiss it before querying the guest shell, rather than waiting behind it.
+    XCUIElement *continueButton = self.app.buttons[@"Continue"];
+    if ([continueButton waitForExistenceWithTimeout:3]) [continueButton tap];
     XCUIElement *prompt = [self.app.webViews.staticTexts matchingPredicate:
         [NSPredicate predicateWithFormat:@"label ENDSWITH ':~#' OR label ENDSWITH ':~# '"]].firstMatch;
     XCTAssertTrue([prompt waitForExistenceWithTimeout:30]);
-    // Dismiss iOS's first-use Slide to Type tutorial if it covers the keyboard.
-    XCUIElement *continueButton = self.app.buttons[@"Continue"];
-    if (continueButton.exists) [continueButton tap];
 }
 - (void)waitForOutput:(NSString *)output timeout:(NSTimeInterval)timeout {
     XCUIElement *line = [self.app.webViews.staticTexts matchingPredicate:
