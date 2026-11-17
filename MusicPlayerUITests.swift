@@ -1,6 +1,25 @@
 import XCTest
 
 final class MusicPlayerUITests: XCTestCase {
+    func testLocalTerminalRunsAnOfflineCommand() {
+        let app = XCUIApplication()
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+        let terminal = app.buttons["homeTerminal"]
+        for _ in 0..<8 { if terminal.exists && terminal.isHittable { break }; app.swipeUp() }
+        terminal.tap()
+        app.buttons["terminalLocal"].tap()
+        let command = app.textFields["localTerminalCommand"]
+        XCTAssertTrue(command.waitForExistence(timeout: 5))
+        command.tap()
+        command.typeText("echo JIZA_LOCAL_OK")
+        app.buttons["Run command"].tap()
+        let output = app.staticTexts["localTerminalOutput"]
+        let executed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "\nJIZA_LOCAL_OK\n"), object: output)
+        XCTAssertEqual(XCTWaiter.wait(for: [executed], timeout: 10), .completed)
+        capture(app, name: "Jiza Local Terminal")
+    }
+
     func testRemoteWorkspaceIsPartOfTheAllInOneHome() {
         let app = XCUIApplication()
         app.launchArguments = ["-oracleTerminalGatewayURL", "http://invalid.example", "-pocketTerminalGatewayURL", "http://invalid.example", "-jizaRemoteGatewayURL", "http://invalid.example"]

@@ -33,7 +33,7 @@ struct JizaRemoteDesktopView: View {
                 JizaWorkspaceBackdrop()
                 Group {
                 if let activeTarget, let url = connectionURL(for: activeTarget) {
-                    RemoteWorkspaceSession(url: url, dataStore: sessionDataStore).id(viewerVersion)
+                    RemoteWorkspaceSession(url: url, dataStore: sessionDataStore, showsInputControls: true).id(viewerVersion)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {

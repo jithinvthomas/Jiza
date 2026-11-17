@@ -25,13 +25,43 @@ enum RemoteWorkspacePolicy {
 struct RemoteWorkspaceSession: View {
     let url: URL
     let dataStore: WKWebsiteDataStore
+    var showsInputControls = false
     @State private var isLoading = true
     @State private var error: String?
     @State private var revision = UUID()
+    @State private var inputRequest: RemoteWorkspaceInput.Request?
+    @State private var inputMessage: String?
 
     var body: some View {
-        RemoteWorkspaceWebView(url: url, dataStore: dataStore, isLoading: $isLoading, error: $error)
+        RemoteWorkspaceWebView(url: url, dataStore: dataStore, isLoading: $isLoading, error: $error,
+                               inputRequest: inputRequest, inputMessage: $inputMessage)
             .id(revision)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if showsInputControls {
+                    HStack {
+                        Button { inputRequest = .init(inputID: "keyboard") } label: {
+                            Label("Keyboard", systemImage: "keyboard")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .accessibilityIdentifier("desktopKeyboard")
+                        Menu {
+                            Button("Touchpad cursor") { inputRequest = .init(inputID: "relative") }
+                            Button("Direct touch") { inputRequest = .init(inputID: "absolute") }
+                        } label: {
+                            Label("Pointer", systemImage: "cursorarrow.motionlines")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .accessibilityIdentifier("desktopPointer")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .background(.bar)
+                    .disabled(isLoading || error != nil)
+                }
+            }
+            .alert("Desktop controls", isPresented: Binding(get: { inputMessage != nil }, set: { if !$0 { inputMessage = nil } })) {
+                Button("OK") { inputMessage = nil }
+            } message: { Text(inputMessage ?? "") }
             .overlay {
                 if let error {
                     VStack(spacing: 16) {
@@ -55,11 +85,41 @@ struct RemoteWorkspaceSession: View {
     }
 }
 
+/// Uses Guacamole 1.6's own input controls rather than synthesizing remote keystrokes.
+enum RemoteWorkspaceInput {
+    struct Request {
+        let id = UUID()
+        let inputID: String
+    }
+
+    static let script = """
+    if (!['keyboard', 'relative', 'absolute'].includes(inputID)) return false;
+    if (!location.hash.startsWith('#/client/') || !document.querySelector('.client-view')) return false;
+    const injector = window.angular?.element(document.body).injector();
+    if (!injector) return false;
+    const root = injector.get('$rootScope');
+    root.$evalAsync(() => root.$broadcast('guacShowMenu'));
+    for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const id = inputID === 'keyboard'
+            ? (document.getElementById('ime-osk')?.checked ? 'ime-none' : 'ime-osk') : inputID;
+        const input = document.getElementById(id);
+        if (!input) continue;
+        if (input.checked) root.$evalAsync(() => root.$broadcast('guacHideMenu'));
+        else input.click();
+        return true;
+    }
+    return false;
+    """
+}
+
 private struct RemoteWorkspaceWebView: UIViewRepresentable {
     let url: URL
     let dataStore: WKWebsiteDataStore
     @Binding var isLoading: Bool
     @Binding var error: String?
+    var inputRequest: RemoteWorkspaceInput.Request?
+    @Binding var inputMessage: String?
 
     func makeCoordinator() -> Coordinator { Coordinator(isLoading: $isLoading, error: $error) }
 
@@ -78,7 +138,19 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
         return web
     }
 
-    func updateUIView(_ web: WKWebView, context: Context) {}
+    func updateUIView(_ web: WKWebView, context: Context) {
+        guard let request = inputRequest, context.coordinator.lastInputRequest != request.id else { return }
+        context.coordinator.lastInputRequest = request.id
+        // Restrict page-world interaction to the configured gateway origin after redirects.
+        guard web.url?.scheme == url.scheme, web.url?.host == url.host, web.url?.port == url.port else {
+            inputMessage = "Return to your Guacamole desktop after signing in, then try again."
+            return
+        }
+        web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": request.inputID], in: nil, in: .page) { result in
+            if case .success(let value) = result, value as? Bool == true { return }
+            inputMessage = "Open a Guacamole desktop first. If your gateway uses different controls, swipe right from its left edge and select the on-screen keyboard or touchpad mouse mode."
+        }
+    }
 
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
         web.stopLoading()
@@ -87,6 +159,7 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        var lastInputRequest: UUID?
         @Binding var isLoading: Bool
         @Binding var error: String?
         init(isLoading: Binding<Bool>, error: Binding<String?>) { _isLoading = isLoading; _error = error }

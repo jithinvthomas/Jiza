@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - finish/jiza-all-in-one
+      - feature/jiza-terminal-controls
 
 permissions:
   contents: read

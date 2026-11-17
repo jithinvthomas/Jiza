@@ -1,5 +1,9 @@
 name: Jiza
 
+packages:
+  JizaShell:
+    path: Packages/JizaShell
+
 options:
   deploymentTarget:
     iOS: 16.0
@@ -27,6 +31,9 @@ targets:
       - JizaRemoteDesktopView.swift
       - JizaWorkspaceDesign.swift
       - RemoteWorkspaceSession.swift
+      - LocalTerminal.swift
+      - path: commandDictionary.plist
+        buildPhase: resources
       - SharedInbox.swift
       - TorrentModel.swift
       - JizaDesign.swift
@@ -97,6 +104,7 @@ targets:
 
     dependencies:
       - target: JizaShare
+      - package: JizaShell
 
   JizaShare:
     type: app-extension

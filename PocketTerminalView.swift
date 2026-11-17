@@ -14,6 +14,7 @@ struct PocketTerminalView: View {
     @State private var activeURL: URL?
     @State private var reload = UUID()
     @State private var sessionDataStore = WKWebsiteDataStore.nonPersistent()
+    @State private var localPresented = false
 
     private enum TerminalHost: String {
         case oracle, windows
@@ -38,9 +39,19 @@ struct PocketTerminalView: View {
                             JizaWorkspaceIntro(
                                 eyebrow: "Developer tools",
                                 title: "Pocket Terminal",
-                                detail: "Your coding workspace, wherever you are. Connect to a remote shell and run Claude Code or Codex.",
+                                detail: "One workspace for local iPhone commands and your Oracle or Windows shell.",
                                 symbol: "terminal.fill"
                             )
+
+                            NavigationLink(isActive: $localPresented) { LocalTerminalView() } label: { EmptyView() }
+                                .hidden()
+                            JizaWorkspaceCard(
+                                title: "On this iPhone",
+                                detail: "Local Unix commands · Works offline",
+                                symbol: "iphone",
+                                color: JizaStyle.mint
+                            ) { localPresented = true }
+                            .accessibilityIdentifier("terminalLocal")
 
                             JizaWorkspaceCard(
                                 title: "Oracle Cloud",
@@ -75,7 +86,7 @@ struct PocketTerminalView: View {
                                         in: RoundedRectangle(cornerRadius: 22))
 
                             JizaWorkspaceNote(
-                                text: "One-tap connections require a previously configured, authenticated HTTPS SSH gateway. Commands execute on the remote server, not on your iPhone."
+                                text: "Local commands run in Jiza's sandbox. Oracle and Windows require a private authenticated gateway; their commands run on the selected computer."
                             )
                         }
                         .padding(.horizontal, 20)
