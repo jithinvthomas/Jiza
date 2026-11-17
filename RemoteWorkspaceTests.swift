@@ -35,16 +35,16 @@ final class RemoteWorkspaceTests: XCTestCase {
             try await Task.sleep(nanoseconds: 20_000_000)
         }
         for id in ["relative", "keyboard"] {
-            let result = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": id], in: nil, in: .page)
+            let result: Any? = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": id], in: nil, contentWorld: .page)
             XCTAssertEqual(result as? Bool, true)
         }
         let checked = try await web.evaluateJavaScript("document.getElementById('relative').checked && document.getElementById('ime-osk').checked")
         XCTAssertEqual(checked as? Bool, true)
-        _ = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": "keyboard"], in: nil, in: .page)
+        _ = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": "keyboard"], in: nil, contentWorld: .page)
         let hidden = try await web.evaluateJavaScript("document.getElementById('ime-none').checked")
         XCTAssertEqual(hidden as? Bool, true)
         _ = try await web.evaluateJavaScript("location.hash = '/login'")
-        let rejected = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": "relative"], in: nil, in: .page)
+        let rejected: Any? = try await web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": "relative"], in: nil, contentWorld: .page)
         XCTAssertEqual(rejected as? Bool, false)
     }
 
