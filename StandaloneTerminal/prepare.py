@@ -71,6 +71,18 @@ target.write_text('https://dl-cdn.alpinelinux.org/alpine/v3.19/main\\nhttps://dl
     controller = root / 'app/TerminalViewController.m'
     controller.write_text(controller.read_text().replace('    [super viewDidLoad];',
         '    [super viewDidLoad];\n    self.controlKey.accessibilityIdentifier = @"terminalControl";\n    self.escapeKey.accessibilityIdentifier = @"terminalEscape";\n    self.hideKeyboardButton.accessibilityIdentifier = @"terminalKeyboard";', 1))
+    # Upstream marks Ctrl with an undocumented toggle trait. On current iOS it
+    # becomes a Switch with no hittable activation point inside the input bar.
+    # Use public button/selected traits and keep its spoken 0/1 value.
+    button = root / 'app/BarButton.m'
+    text = button.read_text().replace('extern UIAccessibilityTraits UIAccessibilityTraitToggle;', '')
+    text = text.replace('self.accessibilityTraits |= 0x20000000000000;', 'self.accessibilityTraits |= UIAccessibilityTraitButton;')
+    text = text.replace('[super setSelected:selected];', '''[super setSelected:selected];
+    if (self.toggleable) {
+        if (selected) self.accessibilityTraits |= UIAccessibilityTraitSelected;
+        else self.accessibilityTraits &= ~UIAccessibilityTraitSelected;
+    }''')
+    button.write_text(text)
     shutil.copy2(recipe / 'LinuxTerminalTests.m', root / 'app/UITests/UITests.m')
     (root / 'app/JizaLicenses').mkdir(exist_ok=True)
     for name in ['GPL-2.0.txt', 'GPL-3.0.txt', 'OpenSSL-LICENSE.txt', 'zlib-LICENSE.txt']:

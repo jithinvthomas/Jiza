@@ -11,6 +11,9 @@
     self.app.launchArguments = @[@"-Skip Startup Message", @"1"];
     [self.app launch];
     XCTAssertTrue([self.app.webViews.staticTexts.firstMatch waitForExistenceWithTimeout:30]);
+    // Dismiss iOS's first-use Slide to Type tutorial if it covers the keyboard.
+    XCUIElement *continueButton = self.app.buttons[@"Continue"];
+    if (continueButton.exists) [continueButton tap];
 }
 - (void)waitForOutput:(NSString *)output timeout:(NSTimeInterval)timeout {
     XCUIElement *line = [self.app.webViews.staticTexts matchingPredicate:
@@ -42,9 +45,11 @@
 }
 - (void)testControlKeyInterruptsALinuxProcess {
     [self.app typeText:@"sleep 60\n"];
-    XCUIElement *control = self.app.switches[@"terminalControl"];
+    XCUIElement *control = self.app.buttons[@"terminalControl"];
     XCTAssertTrue([control waitForExistenceWithTimeout:5]);
+    XCTAssertTrue(control.isHittable);
     [control tap];
+    XCTAssertEqualObjects(control.value, @"1");
     [self.app typeText:@"c"];
     [self.app typeText:@"printf 'JIZA_%s\\n' INTERRUPT_OK\n"];
     [self waitForOutput:@"JIZA_INTERRUPT_OK" timeout:15];
