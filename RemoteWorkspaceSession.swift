@@ -20,18 +20,59 @@ enum RemoteWorkspacePolicy {
         parts?.fragment = "/client/\(clientKey)"
         return parts?.url
     }
+
+    static func terminalURL(_ text: String) -> URL? {
+        if let gateway = gateway(text) { return gateway }
+        guard var parts = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let fragment = parts.fragment, fragment.hasPrefix("/client/"), parts.query == nil else { return nil }
+        let key = String(fragment.dropFirst("/client/".count))
+        parts.fragment = nil
+        guard let base = parts.url else { return nil }
+        return desktopURL(gateway: base.absoluteString, clientKey: key)
+    }
 }
 
 struct RemoteWorkspaceSession: View {
     let url: URL
     let dataStore: WKWebsiteDataStore
+    var showsInputControls = false
     @State private var isLoading = true
     @State private var error: String?
     @State private var revision = UUID()
+    @State private var inputRequest: RemoteWorkspaceInput.Request?
+    @State private var inputMessage: String?
+    @State private var inputBusy = false
 
     var body: some View {
-        RemoteWorkspaceWebView(url: url, dataStore: dataStore, isLoading: $isLoading, error: $error)
+        RemoteWorkspaceWebView(url: url, dataStore: dataStore, isLoading: $isLoading, error: $error,
+                               inputRequest: inputRequest, inputMessage: $inputMessage, inputBusy: $inputBusy)
             .id(revision)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if showsInputControls {
+                    HStack {
+                        Button { sendInput("keyboard") } label: {
+                            Label("Keyboard", systemImage: "keyboard")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .accessibilityIdentifier("desktopKeyboard")
+                        Menu {
+                            Button("Touchpad cursor") { sendInput("relative") }
+                            Button("Direct touch") { sendInput("absolute") }
+                        } label: {
+                            Label("Pointer", systemImage: "cursorarrow.motionlines")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .accessibilityIdentifier("desktopPointer")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .background(.bar)
+                    .disabled(isLoading || error != nil || inputBusy)
+                }
+            }
+            .alert("Remote controls", isPresented: Binding(get: { inputMessage != nil }, set: { if !$0 { inputMessage = nil } })) {
+                Button("OK") { inputMessage = nil }
+            } message: { Text(inputMessage ?? "") }
             .overlay {
                 if let error {
                     VStack(spacing: 16) {
@@ -40,7 +81,10 @@ struct RemoteWorkspaceSession: View {
                         Text(error).multilineTextAlignment(.center)
                         Text("Check that your private network and gateway are available.")
                             .font(.footnote).foregroundStyle(.secondary)
-                        Button("Try again") { self.error = nil; isLoading = true; revision = UUID() }
+                        Button("Try again") {
+                            self.error = nil; inputRequest = nil; inputBusy = false
+                            isLoading = true; revision = UUID()
+                        }
                             .buttonStyle(.borderedProminent)
                     }
                     .padding(24)
@@ -53,6 +97,40 @@ struct RemoteWorkspaceSession: View {
                 }
             }
     }
+
+    private func sendInput(_ inputID: String) {
+        guard !inputBusy else { return }
+        inputBusy = true
+        inputRequest = .init(inputID: inputID)
+    }
+}
+
+/// Uses Guacamole 1.6's own input controls rather than synthesizing remote keystrokes.
+enum RemoteWorkspaceInput {
+    struct Request {
+        let id = UUID()
+        let inputID: String
+    }
+
+    static let script = """
+    if (!['keyboard', 'relative', 'absolute'].includes(inputID)) return false;
+    if (!location.hash.startsWith('#/client/') || !document.querySelector('.client-view')) return false;
+    const injector = window.angular?.element(document.body).injector();
+    if (!injector) return false;
+    const root = injector.get('$rootScope');
+    root.$evalAsync(() => root.$broadcast('guacShowMenu'));
+    for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const id = inputID === 'keyboard'
+            ? (document.getElementById('ime-osk')?.checked ? 'ime-none' : 'ime-osk') : inputID;
+        const input = document.getElementById(id);
+        if (!input) continue;
+        if (input.checked) root.$evalAsync(() => root.$broadcast('guacHideMenu'));
+        else input.click();
+        return true;
+    }
+    return false;
+    """
 }
 
 private struct RemoteWorkspaceWebView: UIViewRepresentable {
@@ -60,6 +138,9 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
     let dataStore: WKWebsiteDataStore
     @Binding var isLoading: Bool
     @Binding var error: String?
+    var inputRequest: RemoteWorkspaceInput.Request?
+    @Binding var inputMessage: String?
+    @Binding var inputBusy: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator(isLoading: $isLoading, error: $error) }
 
@@ -78,7 +159,24 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
         return web
     }
 
-    func updateUIView(_ web: WKWebView, context: Context) {}
+    func updateUIView(_ web: WKWebView, context: Context) {
+        guard let request = inputRequest, context.coordinator.lastInputRequest != request.id else { return }
+        context.coordinator.lastInputRequest = request.id
+        // Restrict page-world interaction to the configured gateway origin after redirects.
+        guard web.url?.scheme == url.scheme, web.url?.host == url.host, web.url?.port == url.port else {
+            DispatchQueue.main.async {
+                inputMessage = "Return to your Guacamole connection after signing in, then try again."
+                inputBusy = false
+            }
+            return
+        }
+        web.callAsyncJavaScript(RemoteWorkspaceInput.script, arguments: ["inputID": request.inputID], in: nil, in: .page) { result in
+            guard context.coordinator.lastInputRequest == request.id else { return }
+            inputBusy = false
+            if case .success(let value) = result, value as? Bool == true { return }
+            inputMessage = "Open a Guacamole desktop first. If your gateway uses different controls, swipe right from its left edge and select the on-screen keyboard or touchpad mouse mode."
+        }
+    }
 
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
         web.stopLoading()
@@ -87,6 +185,7 @@ private struct RemoteWorkspaceWebView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        var lastInputRequest: UUID?
         @Binding var isLoading: Bool
         @Binding var error: String?
         init(isLoading: Binding<Bool>, error: Binding<String?>) { _isLoading = isLoading; _error = error }

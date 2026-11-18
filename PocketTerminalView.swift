@@ -31,7 +31,7 @@ struct PocketTerminalView: View {
             ZStack {
                 JizaWorkspaceBackdrop()
                 if let activeURL {
-                    RemoteWorkspaceSession(url: activeURL, dataStore: sessionDataStore).id(reload)
+                    RemoteWorkspaceSession(url: activeURL, dataStore: sessionDataStore, showsInputControls: true).id(reload)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
@@ -126,7 +126,7 @@ struct PocketTerminalView: View {
                                 .accessibilityIdentifier("terminalGateway")
                         }
                         Section {
-                            Text("Enter an authenticated private HTTPS web terminal gateway, not an SSH IP address or port 22. It must already be configured to connect to the selected remote host.")
+                            Text("Enter your private HTTPS terminal address. Guacamole connection links ending in #/client/ followed by an encoded client key are supported. The gateway must already connect to the selected computer.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                             Text("Save only the gateway address, without a query, token or password. Remote logins are kept separate from Browser and cleared when you leave the connection.")
@@ -207,6 +207,6 @@ struct PocketTerminalView: View {
     }
 
     private func validURL(_ input: String) -> URL? {
-        RemoteWorkspacePolicy.gateway(input)
+        RemoteWorkspacePolicy.terminalURL(input)
     }
 }
