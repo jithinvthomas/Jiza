@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jiza Printer</title>
+<meta name="description" content="Batch printing for Windows. Lock one printer, add a pile of PDFs, images, text and Office files, and print them all in one go.">
+<meta property="og:title" content="Jiza Printer">
+<meta property="og:description" content="Lock one printer, add a pile of files, print them all. Batch printing for Windows.">
+<meta property="og:image" content="https://jiza.app/assets/printer-files.webp">
+<meta property="og:url" content="https://jiza.app/printer">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#315BEB">
+<link rel="icon" href="/assets/printer-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/printer-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Same system as the Jiza home page: frost background, cobalt action, amber for "locked". */
+:root {
+  --frost: #F3F6FC; --sheet: #FFFFFF; --ink: #0E1630; --slate: #5B6785; --rule: #D8E0F2;
+  --cobalt: #315BEB; --cobalt-ink: #FFFFFF; --filament: #E8960F; --tint: #E7EDFC;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --data: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --frost: #0F1730; --sheet: #172242; --ink: #EEF2FF; --slate: #9AA8C7; --rule: #26365F;
+          --cobalt: #5A7EF2; --filament: #FFB547; --tint: #1C2A52; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--frost); color: var(--ink); font: 400 1rem/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 70rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--cobalt); }
+img { max-width: 100%; height: auto; display: block; }
+:focus-visible { outline: 2px solid var(--filament); outline-offset: 3px; border-radius: 4px; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--sheet); padding: .5rem .8rem; border-radius: 6px; }
+.skip:focus { left: 12px; z-index: 20; }
+code, kbd { font: .86em/1.4 var(--data); background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: .1rem .35rem; }
+
+header.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--frost) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
+.bar { display: flex; align-items: center; gap: 1.5rem; padding-block: .8rem; }
+.brand { display: flex; align-items: center; gap: .6rem; color: var(--ink); text-decoration: none; font: 700 1.05rem/1 var(--display); font-stretch: 112%; }
+.brand img { width: 30px; height: 30px; border-radius: 7px; }
+.bar nav { display: flex; gap: 1.4rem; margin-left: auto; font-size: .92rem; }
+.bar nav a { color: var(--slate); text-decoration: none; }
+.bar nav a:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; gap: .55rem; font: 600 .95rem/1 var(--body); text-decoration: none; border-radius: 9px; padding: .8rem 1.15rem; border: 1px solid transparent; }
+.btn-primary { background: var(--cobalt); color: var(--cobalt-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-quiet { color: var(--ink); border-color: var(--rule); background: var(--sheet); }
+.btn-small { padding: .55rem .85rem; font-size: .88rem; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+.hero { padding-block: clamp(2rem, 6vh, 4.5rem) clamp(1.5rem, 4vh, 3rem); }
+.eyebrow { font: 500 .8rem/1 var(--data); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
+.hero h1 { font: 800 clamp(2.2rem, min(5.8vw, 9vh), 4.6rem)/0.98 var(--display); font-stretch: 125%; letter-spacing: -0.02em; margin: .8rem 0 0; max-width: 16ch; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--filament); }
+.lede { max-width: 58ch; margin: 1.2rem 0 0; font-size: clamp(1.02rem, 2.2vh, 1.2rem); color: var(--slate); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1rem; margin-top: 1.8rem; }
+.meta { font: 400 .82rem/1.5 var(--data); color: var(--slate); }
+.hero .window { margin-top: clamp(1.5rem, 5vh, 3rem); }
+
+section { padding-block: clamp(3rem, 8vh, 5rem); border-top: 1px solid var(--rule); }
+h2 { font: 700 clamp(1.6rem, 3.2vw, 2.4rem)/1.08 var(--display); font-stretch: 118%; margin: 0 0 .8rem; text-wrap: balance; max-width: 24ch; }
+h3 { font: 600 1.1rem/1.3 var(--body); margin: 0 0 .4rem; }
+p { margin: 0 0 1rem; max-width: 64ch; }
+.muted { color: var(--slate); }
+.head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 3rem; align-items: end; margin-bottom: 2.2rem; }
+.head p { margin: 0; }
+.window { border-radius: 12px; overflow: hidden; border: 1px solid var(--rule); background: var(--sheet); box-shadow: 0 24px 60px -28px rgba(14, 22, 48, .35); }
+.caption { font-size: .88rem; color: var(--slate); margin-top: .6rem; }
+
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem 2.5rem; }
+.feature p { margin: 0; color: var(--slate); font-size: .96rem; }
+.tag { display: inline-block; font: 500 .74rem/1 var(--data); letter-spacing: .04em; color: var(--cobalt); background: var(--tint); border-radius: 5px; padding: .3rem .45rem; margin-bottom: .7rem; }
+
+/* The guide: numbered steps, each with its own screenshot */
+.guide { list-style: none; padding: 0; margin: 0; counter-reset: step; display: grid; gap: clamp(2.5rem, 6vh, 4rem); }
+.guide > li { counter-increment: step; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 1.2rem 2.5rem; align-items: start; }
+.guide > li.wide { grid-template-columns: minmax(0, 1fr); }
+.guide h3::before { content: "Step " counter(step); display: block; font: 500 .78rem/1 var(--data); letter-spacing: .06em; text-transform: uppercase; color: var(--cobalt); margin-bottom: .55rem; }
+.guide h3 { font: 700 1.35rem/1.2 var(--display); font-stretch: 112%; }
+.guide p, .guide li li { color: var(--slate); font-size: .98rem; }
+.guide ul { margin: .2rem 0 1rem; padding-left: 1.15rem; }
+.guide ul li { margin-bottom: .35rem; }
+.guide figure { margin: 0; }
+.ui { font-weight: 600; color: var(--ink); }
+.note { background: var(--sheet); border: 1px solid var(--rule); border-left: 3px solid var(--filament); border-radius: 10px; padding: .85rem 1.05rem; font-size: .94rem; color: var(--slate); max-width: 64ch; }
+.note strong { color: var(--ink); }
+
+table.kinds { width: 100%; border-collapse: collapse; font-size: .95rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.kinds th, .kinds td { text-align: left; padding: .75rem 1rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.kinds th { font: 500 .78rem/1.2 var(--data); letter-spacing: .05em; text-transform: uppercase; color: var(--slate); }
+.kinds tr:last-child td { border-bottom: 0; }
+.kinds td:first-child { width: 42%; font-weight: 600; }
+
+.faq { display: grid; gap: .6rem; max-width: 52rem; }
+details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: .9rem 1.1rem; }
+summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 500 1.2rem/1 var(--data); color: var(--slate); }
+details[open] summary::after { content: "−"; }
+details p { margin: .7rem 0 0; color: var(--slate); }
+
+.final .box { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: clamp(1.5rem, 4vw, 2.5rem); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem 2rem; align-items: center; }
+.final .actions { display: flex; flex-wrap: wrap; gap: .7rem; }
+.hash { font: .76rem/1.5 var(--data); color: var(--slate); word-break: break-all; margin-top: .6rem; }
+.licence { font: .82rem/1.6 var(--data); color: var(--slate); background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 1.1rem 1.25rem; white-space: pre-wrap; max-width: 52rem; margin: 0; }
+
+footer { border-top: 1px solid var(--rule); padding-block: 2rem 3rem; font-size: .88rem; color: var(--slate); }
+footer .row { display: flex; flex-wrap: wrap; gap: .6rem 1.5rem; justify-content: space-between; }
+footer nav { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; }
+footer a { color: var(--slate); }
+.print-only { display: none; }
+
+@media (max-width: 900px) {
+  .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .head, .guide > li { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .bar nav { display: none; }
+  .bar .btn { margin-left: auto; }
+  .features { grid-template-columns: minmax(0, 1fr); }
+  .final .box { grid-template-columns: minmax(0, 1fr); }
+  .kinds td:first-child { width: auto; }
+}
+
+/* Printed / PDF guide: just the instructions, light, one step per block */
+@media print {
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  :root, :root:not([data-theme="light"]) { --frost: #FFFFFF; --sheet: #FFFFFF; --ink: #0E1630; --slate: #4A5573; --rule: #D8E0F2; --cobalt: #315BEB; --filament: #C77C00; --tint: #E7EDFC; color-scheme: light; }
+  body { font-size: 10.5pt; }
+  header.top, .no-print, footer nav, .skip { display: none !important; }
+  .print-only { display: block; }
+  .wrap { max-width: none; padding: 0; }
+  section { border-top: 0; padding-block: 0; }
+  .guide figure .window { max-width: 120mm; }
+  .guide figure .caption { margin: 1.5mm 0 3mm; }
+  .licence { font-size: 7.4pt; }
+  .hero { padding-block: 0 6mm; }
+  .hero h1 { font-size: 30pt; }
+  .window { box-shadow: none; }
+  .guide { gap: 7mm; }
+  .guide > li { grid-template-columns: minmax(0, 1fr); gap: 3mm; break-inside: avoid; }
+  .guide > li.break { break-before: page; }
+  #guide, #files, #faq, #licence { break-before: page; }
+  details { break-inside: avoid; }
+  summary::after { content: ""; }
+  a { color: var(--ink); text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="/printer"><img src="/assets/printer-icon.png" alt="" width="30" height="30">Jiza Printer</a>
+    <nav aria-label="Sections">
+      <a href="#guide">How to use</a>
+      <a href="#files">File types</a>
+      <a href="#faq">FAQ</a>
+      <a href="/">Jiza Download Manager</a>
+    </nav>
+    <a class="btn btn-primary btn-small" href="/download/JizaPrinter.exe">Download</a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap hero">
+    <div class="eyebrow">Batch printing for Windows</div>
+    <h1>Lock one printer. Print the <em>whole pile.</em></h1>
+    <p class="lede">Jiza Printer prints a list of PDFs, photos, text files and Office documents one after another, all on the printer you locked. Nothing goes to the wrong printer, and you see the result of every file.</p>
+    <div class="cta no-print">
+      <a class="btn btn-primary" href="/download/JizaPrinter.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v3h16v-3"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn btn-quiet" href="/assets/Jiza-Printer-Guide.pdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6"/></svg>
+        Step-by-step guide (PDF)
+      </a>
+      <span class="meta">Version 1.0.0 · 71.9 MB · Windows 10 and 11, 64-bit · No install</span>
+    </div>
+    <p class="print-only meta">User guide · Version 1.0.0 · Download from https://jiza.app/printer</p>
+    <figure class="window" style="margin-bottom:0"><img src="/assets/printer-files.webp" width="1334" height="917" alt="Jiza Printer's window: the printer Microsoft Print to PDF is locked, and five files are waiting in the list with a Print 5 files button."></figure>
+  </div>
+
+  <section class="no-print">
+    <div class="wrap">
+      <div class="features">
+        <div class="feature"><span class="tag">LOCK</span><h3>One printer, every time</h3><p>Lock a printer and every file goes there until you unlock it. The lock stays after a restart.</p></div>
+        <div class="feature"><span class="tag">BATCH</span><h3>Hundreds of files at once</h3><p>Add files, whole folders with their subfolders, drag and drop, or right-click in Explorer and use Send to.</p></div>
+        <div class="feature"><span class="tag">RESULT</span><h3>A result for each file</h3><p>Each file shows Printed, Sent to app or Failed with the reason. One bad file never stops the rest.</p></div>
+        <div class="feature"><span class="tag">OPTIONS</span><h3>Copies, sides and colour</h3><p>1 to 99 copies, 1-sided or 2-sided, colour or black and white, fit to page or actual size.</p></div>
+        <div class="feature"><span class="tag">STATUS</span><h3>See the printer's state</h3><p>Ready, offline, out of paper or jammed, shown before you press Print.</p></div>
+        <div class="feature"><span class="tag">PORTABLE</span><h3>One file, no install</h3><p>A single exe that runs on any 64-bit Windows 10 or 11 PC. Nothing else to install.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="guide">
+    <div class="wrap">
+      <div class="head">
+        <h2>How to use Jiza Printer</h2>
+        <p class="muted">Seven short steps, from download to the last page. You only need steps 1 to 3 once on each PC.</p>
+      </div>
+      <ol class="guide">
+        <li class="wide">
+          <div>
+            <h3>Download the app</h3>
+            <p>Go to <strong>jiza.app/printer</strong> and press <span class="ui">Download for Windows</span>. Your browser saves <code>JizaPrinter.exe</code>, usually in your Downloads folder.</p>
+            <p>Move it to a folder you'll keep, for example <code>Documents</code> or your Desktop, before you open it. The Send to shortcut points to wherever the exe is.</p>
+          </div>
+        </li>
+        <li class="wide">
+          <div>
+            <h3>Open it the first time</h3>
+            <p>Double-click <code>JizaPrinter.exe</code>. There's no installer. The window opens in a few seconds.</p>
+            <div class="note"><strong>If Windows shows "Windows protected your PC":</strong> Jiza Printer is new and not yet code-signed, so Microsoft SmartScreen doesn't recognise it yet. Click <span class="ui">More info</span>, then <span class="ui">Run anyway</span>. You only see this once. To check the file is genuine first, compare its SHA-256 with the one on jiza.app/printer.</div>
+          </div>
+        </li>
+        <li class="break">
+          <div>
+            <h3>Choose a printer and lock it</h3>
+            <p>In box 1, open the list and pick the printer you want, for example your office printer. The dot under it shows whether it's <span class="ui">Ready</span>, offline or out of paper.</p>
+            <p>Press <span class="ui">Lock printer</span>. The box turns amber and says <span class="ui">LOCKED PRINTER</span>. From now on every file prints there, even after you close and reopen the app.</p>
+            <p>To change printer later, press <span class="ui">Unlock</span>, pick another one and lock it again.</p>
+          </div>
+          <figure>
+            <div class="window"><img src="/assets/printer-start.webp" width="1334" height="917" alt="Before locking: the printer list shows Microsoft Print to PDF with a Ready status and a blue Lock printer button." loading="lazy"></div>
+            <figcaption class="caption">Before: pick the printer, then press Lock printer.</figcaption>
+            <div class="window" style="margin-top:1rem"><img src="/assets/printer-locked.webp" width="1334" height="917" alt="After locking: the printer box has an amber border and a padlock, reads LOCKED PRINTER, and the button now says Unlock." loading="lazy"></div>
+            <figcaption class="caption">After: the amber box and padlock mean the printer is locked.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <div>
+            <h3>Set the print options</h3>
+            <ul>
+              <li><span class="ui">Copies</span>: use − and + (1 to 99 copies of each file).</li>
+              <li><span class="ui">Sides</span>: Printer default, 1-sided, or 2-sided (long edge for normal documents, short edge for flip-up pages).</li>
+              <li><span class="ui">Colour</span>: Printer default, Colour, or Black &amp; white to save colour ink.</li>
+              <li><span class="ui">Fit to page</span>: ticked shrinks or grows each page to fit the paper. Unticked prints at actual size.</li>
+              <li><span class="ui">Print new files as soon as they're added</span>: tick this to print the moment a file arrives, without pressing Print.</li>
+            </ul>
+            <p>The app remembers your choices for next time.</p>
+          </div>
+          <figure>
+            <div class="window"><img src="/assets/printer-options.webp" width="1278" height="120" alt="The options row: Copies 1 with minus and plus buttons, Sides Printer default, Colour Printer default, Fit to page ticked, and an unticked Print new files as soon as they're added." loading="lazy"></div>
+            <figcaption class="caption">The options row sits under the locked printer.</figcaption>
+          </figure>
+        </li>
+        <li class="break">
+          <div>
+            <h3>Add the files to print</h3>
+            <p>Use whichever way is easiest:</p>
+            <ul>
+              <li><span class="ui">Add files</span> (or <kbd>Ctrl</kbd>+<kbd>O</kbd>): pick one or many files.</li>
+              <li><span class="ui">Add folder</span>: adds every printable file in a folder and its subfolders, in name order.</li>
+              <li><strong>Drag and drop</strong> files or folders from Explorer onto the window.</li>
+              <li><strong>From Explorer</strong>: select files, right-click, choose <span class="ui">Send to</span> → <span class="ui">Jiza Printer</span>. This needs <span class="ui">Show in Explorer's Send to menu</span> ticked, at the top right of the window. On Windows 11, click <span class="ui">Show more options</span> first.</li>
+            </ul>
+            <p>Each file appears in the list as <span class="ui">Waiting</span>, with its type and size. Select a row and press <span class="ui">Remove</span> to take it out, or <span class="ui">Clear all</span> to start again.</p>
+          </div>
+          <figure>
+            <div class="window"><img src="/assets/printer-list.webp" width="1278" height="342" alt="The file list with Add files, Add folder, Remove, Retry failed, Clear printed and Clear all buttons, and four files waiting: a photo, two invoice PDFs and a text file." loading="lazy"></div>
+            <figcaption class="caption">Files wait in the list until you print. The counter on the right shows how many.</figcaption>
+          </figure>
+        </li>
+        <li class="break">
+          <div>
+            <h3>Press Print</h3>
+            <p>The big button at the bottom says how many files will print, for example <span class="ui">Print 5 files</span>. Press it, or press <kbd>Ctrl</kbd>+<kbd>P</kbd>.</p>
+            <p>Files print one after another, and each row changes to:</p>
+            <ul>
+              <li><span class="ui">Printed</span>: sent to the printer.</li>
+              <li><span class="ui">Sent to app</span>: a Word, Excel or PowerPoint file was handed to that program to print.</li>
+              <li><span class="ui">Failed</span>: something went wrong. The reason is shown, and the other files keep printing.</li>
+            </ul>
+            <p>To stop part-way, press <span class="ui">Stop after this file</span>.</p>
+          </div>
+          <figure>
+            <div class="window"><img src="/assets/printer-files.webp" width="1334" height="917" alt="Ready to print: five files waiting on the locked printer and a blue Print 5 files button at the bottom right." loading="lazy"></div>
+            <figcaption class="caption">The bottom bar shows the printer and copies before you press Print.</figcaption>
+          </figure>
+        </li>
+        <li class="wide">
+          <div>
+            <h3>Tidy up</h3>
+            <ul>
+              <li><span class="ui">Retry failed</span>: puts failed files back in the queue after you fix the problem, such as adding paper.</li>
+              <li><span class="ui">Clear printed</span>: removes finished files and keeps the rest.</li>
+              <li>Close the window when you're done. The locked printer and options are saved for next time.</li>
+            </ul>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="files">
+    <div class="wrap">
+      <div class="head">
+        <h2>What it can print</h2>
+        <p class="muted">Jiza Printer picks the right way to print each file for you.</p>
+      </div>
+      <table class="kinds">
+        <thead><tr><th scope="col">File type</th><th scope="col">How it prints</th></tr></thead>
+        <tbody>
+          <tr><td>PDF, XPS, EPUB, MOBI, comic books (CBZ, CBR), DjVu, CHM</td><td>Printed directly by Jiza Printer's built-in engine. No other program needed.</td></tr>
+          <tr><td>Photos: JPG, PNG, GIF, BMP, TIFF (every page), WebP</td><td>Printed directly, one picture per page. Wide pictures print on landscape paper.</td></tr>
+          <tr><td>Text: TXT, CSV, LOG, JSON, XML and code files</td><td>Printed directly in a clear fixed-width font.</td></tr>
+          <tr><td>Word, Excel, PowerPoint, RTF, ODT, HTML</td><td>Handed to the program installed for that file, such as Microsoft Word, to print. That program must be installed. For these files, 2-sided and colour come from that program's own settings.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions and problems</h2>
+      <div class="faq">
+        <details><summary>A Word or Excel file says Failed</summary><p>Word and Excel files print through Microsoft Office (or another program set to open them). Check that Office is installed and that the file opens normally when you double-click it. Then press Retry failed.</p></details>
+        <details><summary>The printer shows offline or out of paper</summary><p>Fix the printer first: turn it on, check the cable or Wi-Fi, add paper or clear the jam. Press the small refresh button next to the status to check again, then Retry failed.</p></details>
+        <details><summary>I don't see Jiza Printer in Send to</summary><p>Tick Show in Explorer's Send to menu at the top right of the window. On Windows 11, right-click the files and choose Show more options to see Send to. If you moved the exe, open it once from its new place so the shortcut updates.</p></details>
+        <details><summary>Pages come out too small or cut off</summary><p>Tick Fit to page to scale each page to the paper. Untick it to print at the file's actual size.</p></details>
+        <details><summary>How do I know the download is genuine?</summary><p>In the folder where you saved it, open PowerShell and run <code>Get-FileHash JizaPrinter.exe</code>. The result must match the SHA-256 shown at the bottom of jiza.app/printer.</p></details>
+        <details><summary>How do I remove it?</summary><p>Untick Show in Explorer's Send to menu, close the app, delete JizaPrinter.exe, and delete the folders %AppData%\JizaPrinter and %LocalAppData%\JizaPrinter.</p></details>
+        <details><summary>Does it send any data anywhere?</summary><p>No. Jiza Printer works entirely on your PC and only talks to your printers. There are no accounts, ads or analytics.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final no-print">
+    <div class="wrap">
+      <div class="box">
+        <div>
+          <h2 style="margin-bottom:.4rem">Download Jiza Printer</h2>
+          <p class="muted" style="margin:0">Version 1.0.0 · 71.9 MB · Windows 10 and 11, 64-bit</p>
+          <p class="hash">SHA-256 44dee2be840f74dc56b242c63932987351122717696c38c9406cdb90b1a7cd0d</p>
+        </div>
+        <div class="actions">
+          <a class="btn btn-primary" href="/download/JizaPrinter.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v3h16v-3"/></svg>
+            Download for Windows
+          </a>
+          <a class="btn btn-quiet" href="/assets/Jiza-Printer-Guide.pdf">Guide (PDF)</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="licence">
+    <div class="wrap">
+      <h2>Copyright and licence</h2>
+      <p class="muted">Jiza Printer is proprietary software by Jithin Varghese Thomas. You may use it on your own PCs and inside your organisation. You may not copy, resell or change it. The full terms:</p>
+<pre class="licence">Jiza Printer
+Copyright (c) 2026 Jithin Varghese Thomas. All rights reserved.
+
+1. Permission to use. You may install and run Jiza Printer for your own use or your
+   organisation's internal use if you got it from jiza.app or from the Owner.
+2. Restrictions. Without the Owner's written permission you may not copy, publish,
+   share, sell, rent or sublicense it; modify it or build on it; reverse engineer,
+   decompile or disassemble it (except where the law allows this anyway); or remove
+   any copyright notice, name or logo.
+3. Ownership. The software is licensed, not sold. All other rights are reserved.
+4. No warranty. It is provided "as is". The Owner is not liable for any loss,
+   including wasted paper or ink.
+5. Third-party parts. Jiza Printer includes SumatraPDF, owned by its own authors and
+   licensed under the GNU GPL v3 (source: github.com/sumatrapdfreader/sumatrapdf).
+   These terms don't apply to SumatraPDF or limit your rights in it.
+6. Termination. This permission ends if you break these terms; you must then delete
+   every copy.
+
+Protected under UAE Federal Decree-Law No. 38 of 2021 on Copyright and Neighbouring
+Rights and international copyright treaties.</pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>© 2026 Jithin Varghese Thomas. All rights reserved.</span>
+    <nav aria-label="More">
+      <a href="/">Jiza Download Manager</a>
+      <a href="#licence">Printer licence</a>
+    </nav>
+  </div>
+</footer>
+<script>
+// Printed copies (and the PDF guide, rendered from ?print) show every answer, not just the open ones.
+(() => {
+  const openAll = () => document.querySelectorAll("details").forEach(d => { d.open = true; });
+  addEventListener("beforeprint", openAll);
+  if (new URLSearchParams(location.search).has("print")) openAll();
+})();
+</script>
+</body>
+</html>

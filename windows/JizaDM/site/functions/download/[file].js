@@ -2,6 +2,7 @@
 // Supports HEAD and Range requests so download managers can resume and use many connections.
 const RELEASES = {
   "JizaDM.exe": { key: "JizaDM-1.0.2.exe", type: "application/vnd.microsoft.portable-executable" },
+  "JizaPrinter.exe": { key: "JizaPrinter-1.0.0.exe", type: "application/vnd.microsoft.portable-executable" },
 };
 
 export async function onRequest({ request, env, params }) {
